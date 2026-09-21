@@ -1,9 +1,9 @@
 /**
- * Mock AI Provider for offline testing, CI, and development without an active API key.
+ * Mock AI Provider for Phase 4 Adaptive Tutoring.
  *
- * Provides curated Socratic questions and evaluations for core DSA concepts
- * (e.g. Binary Search, Search Space Reduction, Sorted Array) and dynamic
- * fallback questions for any other concept.
+ * Provides curated Socratic questions, hint ladders, and evaluations
+ * supporting multiple interaction types (MCQ, Multiple Select, Ordering, Short Text)
+ * and prerequisite descent scenarios.
  */
 
 import {
@@ -27,11 +27,52 @@ const HINT_TITLES: Record<number, string> = {
 
 export class MockAIProvider implements AIProvider {
   async generateQuestion(context: TutorContext): Promise<GeneratedQuestion> {
-    const isBinarySearch = context.conceptName.toLowerCase().includes('binary search');
+    const conceptLower = context.conceptName.toLowerCase();
     const interactionCount = context.recentInteractions.length;
 
-    if (isBinarySearch) {
+    // Prerequisite Descent: Sorted Arrays
+    if (context.isPrerequisiteDescent || conceptLower.includes('sorted array')) {
+      return {
+        interactionType: 'multiple_choice',
+        questionText:
+          'In a sorted array, if our target value is strictly less than the middle element (target < arr[mid]), what can we mathematically conclude about all elements to the right of mid?',
+        options: [
+          'They are all >= arr[mid], so our target cannot possibly exist anywhere in the right half',
+          'They might still contain the target if there are negative numbers',
+          'We cannot conclude anything without checking each element one by one',
+          'The target must be located at the very last index',
+        ],
+        correctOptionIndex: 0,
+        expectedEvidence: ['understands directional property of sorted data', 'recognizes safe elimination'],
+        objective: 'Master the sorted prerequisite enabling directional elimination',
+        conceptId: context.conceptId,
+        conceptName: context.conceptName,
+        isPrerequisiteDescent: true,
+        descentReason: context.descentReason || 'Foundational sorted array property check',
+      };
+    }
+
+    // Prerequisite Descent: Search Space Reduction
+    if (conceptLower.includes('search space reduction')) {
+      return {
+        interactionType: 'multiple_choice',
+        questionText:
+          'If an algorithm eliminates 50% of remaining candidates in a single comparison, how many candidates remain after 3 comparisons if we start with 64?',
+        options: ['8 candidates (64 → 32 → 16 → 8)', '16 candidates', '32 candidates', '0 candidates'],
+        correctOptionIndex: 0,
+        expectedEvidence: ['understands halving candidates'],
+        objective: 'Understand geometric search space reduction',
+        conceptId: context.conceptId,
+        conceptName: context.conceptName,
+        isPrerequisiteDescent: true,
+        descentReason: 'Search space halving prerequisite',
+      };
+    }
+
+    // Binary Search Root Concept — Adaptive Progression across interaction types
+    if (conceptLower.includes('binary search')) {
       if (interactionCount === 0) {
+        // Step 1: Multiple Choice
         return {
           interactionType: 'multiple_choice',
           questionText:
@@ -45,44 +86,78 @@ export class MockAIProvider implements AIProvider {
           correctOptionIndex: 1,
           expectedEvidence: ['understands middle comparison', 'understands eliminating half'],
           objective: 'Understand binary search division of search space',
+          conceptId: context.conceptId,
+          conceptName: context.conceptName,
         };
       }
 
       if (interactionCount === 1) {
+        // Step 2: Multiple Select (Checkboxes)
         return {
-          interactionType: 'short_text',
+          interactionType: 'multiple_select',
           questionText:
-            'Why does Binary Search strictly require the underlying collection to be sorted? What would happen if the array were unsorted?',
-          expectedEvidence: ['sorted order allows deterministic elimination', 'unsorted cannot eliminate halves'],
-          objective: 'Understand the sorted requirement prerequisite',
+            'Which of the following conditions are STRICT PREREQUISITES for standard Binary Search to execute correctly? (Select all that apply)',
+          options: [
+            'The collection elements must be arranged in sorted order',
+            'The data structure must allow O(1) random access by index (e.g. array)',
+            'All values in the collection must be positive integers',
+            'We must maintain explicit boundaries for the remaining search space (left and right pointers)',
+          ],
+          correctOptionIndices: [0, 1, 3],
+          expectedEvidence: ['identifies sorted requirement', 'identifies random access', 'rejects positive-only restriction'],
+          objective: 'Identify mandatory preconditions for binary search',
+          conceptId: context.conceptId,
+          conceptName: context.conceptName,
         };
       }
 
+      if (interactionCount === 2) {
+        // Step 3: Ordering / Sequence (Algorithmic steps)
+        return {
+          interactionType: 'ordering',
+          questionText:
+            'Arrange the following operations in the exact logical sequence executed during one iteration of Binary Search:',
+          orderingItems: [
+            'Calculate midpoint index: mid = left + (right - left) // 2',
+            'Compare target with arr[mid]',
+            'Check if arr[mid] == target (return mid if found)',
+            'Adjust search boundary: if target < arr[mid] set right = mid - 1, else left = mid + 1',
+          ],
+          correctOrder: [0, 1, 2, 3],
+          expectedEvidence: ['correct execution sequence of binary search iteration'],
+          objective: 'Execute and trace binary search loop body invariant',
+          conceptId: context.conceptId,
+          conceptName: context.conceptName,
+        };
+      }
+
+      // Step 4+: Short Text Reasoning
       return {
-        interactionType: 'multiple_choice',
+        interactionType: 'short_text',
         questionText:
-          'If the array size is 1,024, at most how many comparisons are needed in the worst case to locate the target or verify it is absent?',
-        options: ['1,024 comparisons', '512 comparisons', '10 comparisons (since 2^10 = 1,024)', '1 comparison'],
-        correctOptionIndex: 2,
-        expectedEvidence: ['understands log2(n) relationship'],
+          'Why does halving a search space of size n repeatedly result in O(log n) time complexity rather than O(n)? Explain the mathematical connection between halving and logarithms.',
+        expectedEvidence: ['connects halving to log2(n)', 'explains inverse of exponentiation'],
         objective: 'Connect halving to logarithmic time complexity',
+        conceptId: context.conceptId,
+        conceptName: context.conceptName,
       };
     }
 
-    // Dynamic contextual question for any other concept
-    const objective = context.learningObjectives[0] || `Master ${context.conceptName}`;
+    // Generic concept fallback
     return {
       interactionType: 'multiple_choice',
-      questionText: `Let's test our understanding of ${context.conceptName}: What is the primary purpose of ${context.conceptName}?`,
+      questionText: `Let's test our understanding of ${context.conceptName}: What is the primary characteristic of ${context.conceptName}?`,
       options: [
-        `To efficiently solve problems related to ${context.conceptName}`,
-        `A brute-force strategy that checks every possibility`,
-        `A theoretical model with no practical use`,
+        `It provides an optimal or efficient structure for ${context.conceptName} operations`,
+        `It operates randomly without predictable invariants`,
+        `It only works on empty collections`,
         `None of the above`,
       ],
       correctOptionIndex: 0,
       expectedEvidence: [`identifies purpose of ${context.conceptName}`],
-      objective,
+      objective: context.learningObjectives[0] || `Master ${context.conceptName}`,
+      conceptId: context.conceptId,
+      conceptName: context.conceptName,
     };
   }
 
@@ -92,66 +167,167 @@ export class MockAIProvider implements AIProvider {
     response: StudentResponse
   ): Promise<EvaluationResult> {
     const rawAnswer = response.answer.trim();
+    let isCorrect = false;
+    let score = 0.0;
+    let feedback = '';
+    let recommendation: EvaluationResult['recommendation'] = 'advance';
 
+    // 1. Multiple Choice Evaluation
     if (question.interactionType === 'multiple_choice') {
       const selectedIndex = parseInt(rawAnswer, 10);
-      const isCorrect =
+      isCorrect = Boolean(
         question.correctOptionIndex !== undefined &&
-        (selectedIndex === question.correctOptionIndex ||
-          (question.options &&
-            question.options[question.correctOptionIndex]?.toLowerCase() === rawAnswer.toLowerCase()));
+          (selectedIndex === question.correctOptionIndex ||
+            (question.options &&
+              question.options[question.correctOptionIndex]?.toLowerCase() === rawAnswer.toLowerCase()))
+      );
 
+      score = isCorrect ? 1.0 : 0.0;
       if (isCorrect) {
-        return {
-          isCorrect: true,
-          understandingDemonstrated: true,
-          score: 1.0,
-          feedback:
-            'Spot on! By comparing with the middle element, we discard half the remaining search space with each single check.',
-          recommendation: 'advance',
-        };
+        feedback =
+          'Spot on! By comparing with the middle element, we discard half the remaining search space with each single check.';
+        recommendation = 'advance';
       } else {
-        return {
-          isCorrect: false,
-          understandingDemonstrated: false,
-          score: 0.0,
-          feedback:
-            "Not quite. Think about how we can take advantage of the elements being in sorted order without inspecting every single one.",
-          detectedMisconception: 'Linear scanning assumption',
-          recommendation: 'probe_deeper',
-        };
+        feedback =
+          'Not quite. Think about how we can take advantage of the elements being in sorted order without inspecting every single one.';
+        recommendation = 'descend_prerequisite';
       }
     }
 
-    // Short text evaluation
-    const lower = rawAnswer.toLowerCase();
-    const mentionsElimination =
-      lower.includes('eliminat') ||
-      lower.includes('half') ||
-      lower.includes('order') ||
-      lower.includes('know where') ||
-      lower.includes('direction') ||
-      lower.includes('left or right');
+    // 2. Multiple Select Evaluation
+    else if (question.interactionType === 'multiple_select') {
+      let selectedIndices: number[] = [];
+      try {
+        if (rawAnswer.startsWith('[')) {
+          selectedIndices = JSON.parse(rawAnswer);
+        } else {
+          selectedIndices = rawAnswer
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n));
+        }
+      } catch {
+        selectedIndices = [];
+      }
 
-    if (mentionsElimination || rawAnswer.length > 20) {
-      return {
-        isCorrect: true,
-        understandingDemonstrated: true,
-        score: 0.9,
-        feedback:
-          'Great reasoning! Without sorted order, knowing that a target is greater than the middle element tells us nothing about which half it lives in.',
-        recommendation: 'advance',
+      const correct = (question.correctOptionIndices || []).slice().sort();
+      const selected = selectedIndices.slice().sort();
+
+      const isExact =
+        correct.length === selected.length &&
+        correct.every((val, index) => val === selected[index]);
+
+      if (isExact) {
+        isCorrect = true;
+        score = 1.0;
+        feedback =
+          'Excellent! Binary Search strictly requires sorted order, O(1) random access by index, and search boundaries. Elements do NOT have to be positive integers — negative values, strings, and floats work identically!';
+        recommendation = 'advance';
+      } else {
+        const missedAny = correct.some((c) => !selected.includes(c));
+        const includedNegativeRestriction = selected.includes(2);
+
+        isCorrect = false;
+        score = 0.4;
+        if (includedNegativeRestriction) {
+          feedback =
+            'Close! Note that Binary Search works for any type with a defined total ordering (including negative numbers and strings). Only sorted order, indexable access, and search boundaries are required.';
+        } else if (missedAny) {
+          feedback =
+            'You caught some key conditions, but missed at least one mandatory prerequisite. Remember that calculating mid requires random indexed access in O(1).';
+        } else {
+          feedback = 'Review the prerequisites needed to eliminate half the search space reliably.';
+        }
+        recommendation = 'probe_deeper';
+      }
+    }
+
+    // 3. Ordering / Sequence Evaluation
+    else if (question.interactionType === 'ordering') {
+      let orderIndices: number[] = [];
+      try {
+        if (rawAnswer.startsWith('[')) {
+          orderIndices = JSON.parse(rawAnswer);
+        } else {
+          orderIndices = rawAnswer
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n));
+        }
+      } catch {
+        orderIndices = [];
+      }
+
+      const expected = question.correctOrder || [0, 1, 2, 3];
+      const isExactOrder =
+        orderIndices.length === expected.length &&
+        orderIndices.every((val, index) => val === expected[index]);
+
+      if (isExactOrder) {
+        isCorrect = true;
+        score = 1.0;
+        feedback =
+          'Perfect sequence! First compute the midpoint, compare with target, test for equality, and finally shrink the left or right boundary.';
+        recommendation = 'advance';
+      } else {
+        isCorrect = false;
+        score = 0.3;
+        feedback =
+          'Check the order of operations: we must always compute the midpoint before we can inspect or compare `arr[mid]`.';
+        recommendation = 'probe_deeper';
+      }
+    }
+
+    // 4. Short Text Reasoning Evaluation
+    else {
+      const lower = rawAnswer.toLowerCase();
+      const mentionsLogOrHalving =
+        (lower.includes('half') || lower.includes('halv') || lower.includes('divide')) &&
+        (lower.includes('log') || lower.includes('power') || lower.includes('2^'));
+
+      if (mentionsLogOrHalving || rawAnswer.length > 25) {
+        isCorrect = true;
+        score = 0.95;
+        feedback =
+          'Brilliant mathematical reasoning! Because we divide by 2 at each step, after k steps we have n / 2^k candidates. Setting n / 2^k = 1 yields k = log₂(n).';
+        recommendation = 'advance';
+      } else {
+        isCorrect = false;
+        score = 0.35;
+        feedback =
+          'Good attempt, but connect the repeated division by 2 explicitly to logarithms (which represent the inverse of powers of 2).';
+        recommendation = 'probe_deeper';
+      }
+    }
+
+    // Compute Confidence Calibration
+    let calibration: EvaluationResult['calibration'];
+    if (response.confidence === 'confident' && score < 0.5) {
+      calibration = {
+        type: 'overconfident',
+        message:
+          '💡 Surprising Trap: You felt very confident here, but fell into a common pitfall. Recognizing these deceptive traps is how mastery is built.',
+      };
+    } else if (response.confidence === 'unsure' && score >= 0.8) {
+      calibration = {
+        type: 'underconfident',
+        message:
+          '🌟 Trust Your Instincts: You reported feeling unsure, but your reasoning was completely correct! Be confident in your analytical deduction.',
+      };
+    } else {
+      calibration = {
+        type: 'calibrated',
+        message: 'Your self-reported confidence accurately matched your demonstrated understanding.',
       };
     }
 
     return {
-      isCorrect: false,
-      understandingDemonstrated: false,
-      score: 0.3,
-      feedback:
-        'You have the right intuition, but consider: if the numbers are scattered randomly, can we safely throw away either half after checking the middle?',
-      detectedMisconception: 'Unclear on why unsorted breaks directional elimination',
-      recommendation: 'probe_deeper',
+      isCorrect,
+      understandingDemonstrated: score >= 0.7,
+      score,
+      feedback,
+      calibration,
+      recommendation,
     };
   }
 
@@ -164,13 +340,13 @@ export class MockAIProvider implements AIProvider {
     const title = HINT_TITLES[level] || `Hint Level ${level}`;
 
     const hints: Record<number, string> = {
-      1: 'Ask yourself: if the book is alphabetized, what do you do when the word you are looking for starts with "M" and you open to "T"?',
-      2: 'Remember that sorted data gives you directional knowledge: everything to the left is smaller, and everything to the right is larger.',
-      3: 'This is the "Divide and Conquer" pattern applied to an indexed collection.',
-      4: 'Look at the midpoint: `mid = left + (right - left) // 2`. If `target < arr[mid]`, where must target be?',
-      5: '`if arr[mid] == target: return mid`\n`elif target < arr[mid]: right = mid - 1`\n`else: left = mid + 1`',
-      6: 'Initialize two pointers: `left = 0`, `right = len(arr) - 1`. Loop while `left <= right`. Compute `mid` each iteration.',
-      7: 'Full explanation: Binary Search halves the candidates every iteration. Starting with n, after k iterations we have n / 2^k elements. When n / 2^k = 1, k = log2(n). This is why 1,024 elements take at most 10 steps.',
+      1: 'Ask yourself: what property of the data allows us to completely ignore an entire half without reading its elements?',
+      2: 'Remember: sorted data gives directional certainty. If target < arr[mid], target cannot be anywhere to the right.',
+      3: 'This is the "Search Space Halving" invariant.',
+      4: 'Look at how pointers move: `left = mid + 1` or `right = mid - 1`.',
+      5: '`mid = left + (right - left) // 2`\n`if arr[mid] == target: return mid`\n`elif target < arr[mid]: right = mid - 1`\n`else: left = mid + 1`',
+      6: 'Watch out for integer overflow in other languages: using `left + (right - left) // 2` is safer than `(left + right) // 2`.',
+      7: 'Full explanation: Binary search requires sorted order and indexable O(1) random access. Each step tests the median element and discards n/2 items, yielding log2(n) worst-case time complexity.',
     };
 
     return {

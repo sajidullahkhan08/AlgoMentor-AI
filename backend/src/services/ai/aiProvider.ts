@@ -22,20 +22,40 @@ export interface TutorContext {
   difficulty?: string;
   prerequisites?: Array<{ id: string; name: string }>;
   recentInteractions: InteractionSummary[];
+  isPrerequisiteDescent?: boolean;
+  descentReason?: string;
 }
 
 export interface GeneratedQuestion {
-  interactionType: 'multiple_choice' | 'short_text' | 'prediction' | 'code_completion';
+  interactionType:
+    | 'multiple_choice'
+    | 'multiple_select'
+    | 'ordering'
+    | 'short_text'
+    | 'prediction'
+    | 'code_completion';
   questionText: string;
   options?: string[];
   correctOptionIndex?: number;
+  correctOptionIndices?: number[];
+  orderingItems?: string[];
+  correctOrder?: number[];
   expectedEvidence: string[];
   objective: string;
+  conceptId?: string;
+  conceptName?: string;
+  isPrerequisiteDescent?: boolean;
+  descentReason?: string;
 }
 
 export interface StudentResponse {
-  answer: string;
+  answer: string; // Can be option index, comma-separated indices, or ordered list of item indices
   confidence?: 'confident' | 'somewhat_confident' | 'unsure' | 'dont_know';
+}
+
+export interface CalibrationResult {
+  type: 'overconfident' | 'underconfident' | 'calibrated';
+  message: string;
 }
 
 export interface EvaluationResult {
@@ -44,7 +64,9 @@ export interface EvaluationResult {
   score: number; // 0.0 to 1.0
   feedback: string;
   detectedMisconception?: string | null;
-  recommendation: 'advance' | 'probe_deeper' | 'descend_prerequisite' | 'retry';
+  calibration?: CalibrationResult;
+  recommendation: 'advance' | 'probe_deeper' | 'descend_prerequisite' | 'ascend_target' | 'retry';
+  recommendedPrerequisiteConceptId?: string;
 }
 
 export interface GeneratedHint {

@@ -111,7 +111,10 @@ export class TutorEngine {
       };
     }
 
-    // 5. Generate first question if none exist
+    // 5. Fetch prerequisites for context
+    const prerequisites = await this.getPrerequisites(concept.id);
+
+    // 6. Generate first question if none exist
     const context: TutorContext = {
       conceptId: concept.id,
       conceptName: concept.name,
@@ -119,6 +122,7 @@ export class TutorEngine {
       learningObjectives: concept.learning_objectives || [],
       masteryState: knowledge.mastery_state,
       difficulty: concept.difficulty || 'beginner',
+      prerequisites,
       recentInteractions: (interactions || []).map((i) => ({
         interactionType: i.interaction_type,
         question: i.question,
@@ -214,13 +218,18 @@ export class TutorEngine {
       .eq('session_id', sessionId)
       .order('sort_order', { ascending: true });
 
+    const question: GeneratedQuestion = interaction.question;
+    const isCurrentDescent = Boolean(question.isPrerequisiteDescent);
+
     const context: TutorContext = {
-      conceptId: concept.id,
-      conceptName: concept.name,
+      conceptId: isCurrentDescent && question.conceptId ? question.conceptId : concept.id,
+      conceptName: isCurrentDescent && question.conceptName ? question.conceptName : concept.name,
       conceptDescription: concept.description || '',
       learningObjectives: concept.learning_objectives || [],
       masteryState: knowledge?.mastery_state || 'LEARNING',
       difficulty: concept.difficulty,
+      isPrerequisiteDescent: isCurrentDescent,
+      descentReason: question.descentReason,
       recentInteractions: (allInteractions || []).map((i) => ({
         interactionType: i.interaction_type,
         question: i.question,
@@ -230,7 +239,6 @@ export class TutorEngine {
       })),
     };
 
-    const question: GeneratedQuestion = interaction.question;
     const evaluation = await this.ai.evaluateResponse(context, question, studentResponse);
 
     // 5. Update interaction row
@@ -254,22 +262,162 @@ export class TutorEngine {
     const currentMastery = (knowledge?.mastery_state as MasteryState) || 'INTRODUCED';
     const nextMastery = this.computeNextMasteryState(currentMastery, evaluation.score, newScore);
 
-    await this.supabase
-      .from('student_knowledge')
-      .update({
-        mastery_state: nextMastery,
-        evidence_score: newScore,
-        last_assessed: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-      .eq('concept_id', session.concept_id);
+    if (isCurrentDescent) {
+      // Update prerequisite concept knowledge
+      const prereqConceptId = question.conceptId;
+      if (prereqConceptId && prereqConceptId !== session.concept_id) {
+        const prereqMastery: MasteryState = evaluation.score >= 0.8 ? 'DEVELOPING' : 'LEARNING';
+        await this.supabase.from('student_knowledge').upsert(
+          {
+            user_id: userId,
+            concept_id: prereqConceptId,
+            mastery_state: prereqMastery,
+            evidence_score: evaluation.score >= 0.8 ? 0.75 : 0.4,
+            last_assessed: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id,concept_id' }
+        );
+      }
+    } else {
+      // Normal target concept update
+      await this.supabase
+        .from('student_knowledge')
+        .update({
+          mastery_state: nextMastery,
+          evidence_score: newScore,
+          last_assessed: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId)
+        .eq('concept_id', session.concept_id);
+    }
 
-    // 7. Determine if session should conclude or generate next interaction
-    const totalAnswered = (allInteractions?.filter((i) => i.id !== interactionId && i.student_response)?.length || 0) + 1;
-    const isCompleted = totalAnswered >= 3 && (nextMastery === 'PROFICIENT' || nextMastery === 'MASTERED' || evaluation.score >= 0.8);
+    // 7. Check if we should descend, ascend, complete, or advance
+    const totalAnswered =
+      (allInteractions?.filter((i) => i.id !== interactionId && i.student_response)?.length || 0) + 1;
 
     let nextInteraction = null;
+    let isCompleted = false;
+
+    // Prerequisite Descent Trigger Check:
+    // If not already in descent and student struggled or AI recommended descent
+    const shouldDescend =
+      !isCurrentDescent &&
+      (evaluation.recommendation === 'descend_prerequisite' ||
+        (evaluation.score < 0.5 && (currentMastery === 'INTRODUCED' || currentMastery === 'LEARNING')));
+
+    if (shouldDescend) {
+      const unmasteredPrereq = await this.findUnmasteredPrerequisite(userId, session.concept_id);
+      if (unmasteredPrereq) {
+        evaluation.recommendation = 'descend_prerequisite';
+        evaluation.recommendedPrerequisiteConceptId = unmasteredPrereq.id;
+
+        const descentContext: TutorContext = {
+          conceptId: unmasteredPrereq.id,
+          conceptName: unmasteredPrereq.name,
+          conceptDescription: unmasteredPrereq.description || '',
+          learningObjectives: unmasteredPrereq.learning_objectives || [],
+          masteryState: 'INTRODUCED',
+          difficulty: unmasteredPrereq.difficulty || 'beginner',
+          recentInteractions: [
+            ...(allInteractions || []).map((i) => ({
+              interactionType: i.interaction_type,
+              question: i.question,
+              studentResponse: i.id === interactionId ? responsePayload : i.student_response,
+              evaluation: i.id === interactionId ? evaluation : i.evaluation,
+              hintLevel: i.hint_level || 0,
+            })),
+          ],
+          isPrerequisiteDescent: true,
+          descentReason: `Reinforce foundational understanding of ${unmasteredPrereq.name} before continuing with ${concept.name}.`,
+        };
+
+        const prereqQuestion = await this.ai.generateQuestion(descentContext);
+        prereqQuestion.isPrerequisiteDescent = true;
+        prereqQuestion.descentReason = descentContext.descentReason;
+        prereqQuestion.conceptId = unmasteredPrereq.id;
+        prereqQuestion.conceptName = unmasteredPrereq.name;
+
+        const { data: createdDescent } = await this.supabase
+          .from('interactions')
+          .insert({
+            session_id: sessionId,
+            interaction_type: prereqQuestion.interactionType,
+            question: prereqQuestion,
+            expected_evidence: prereqQuestion.expectedEvidence,
+            hint_level: 0,
+            sort_order: totalAnswered + 1,
+          })
+          .select()
+          .single();
+
+        nextInteraction = createdDescent;
+
+        return {
+          evaluation,
+          nextInteraction,
+          masteryState: nextMastery,
+          isCompleted: false,
+        };
+      }
+    }
+
+    // Prerequisite Ascent Trigger Check:
+    // If student just succeeded on a descent question (score >= 0.8), ascend back to the target concept!
+    if (isCurrentDescent && evaluation.score >= 0.8) {
+      evaluation.recommendation = 'ascend_target';
+      evaluation.feedback += `\n\n🎉 Great job reinforcing this prerequisite! Now let's return to our target: ${concept.name}.`;
+
+      const targetContext: TutorContext = {
+        conceptId: concept.id,
+        conceptName: concept.name,
+        conceptDescription: concept.description || '',
+        learningObjectives: concept.learning_objectives || [],
+        masteryState: nextMastery,
+        difficulty: concept.difficulty,
+        recentInteractions: [
+          ...(allInteractions || []).map((i) => ({
+            interactionType: i.interaction_type,
+            question: i.question,
+            studentResponse: i.id === interactionId ? responsePayload : i.student_response,
+            evaluation: i.id === interactionId ? evaluation : i.evaluation,
+            hintLevel: i.hint_level || 0,
+          })),
+        ],
+        isPrerequisiteDescent: false,
+      };
+
+      const nextQuestion = await this.ai.generateQuestion(targetContext);
+
+      const { data: createdAscent } = await this.supabase
+        .from('interactions')
+        .insert({
+          session_id: sessionId,
+          interaction_type: nextQuestion.interactionType,
+          question: nextQuestion,
+          expected_evidence: nextQuestion.expectedEvidence,
+          hint_level: 0,
+          sort_order: totalAnswered + 1,
+        })
+        .select()
+        .single();
+
+      nextInteraction = createdAscent;
+
+      return {
+        evaluation,
+        nextInteraction,
+        masteryState: nextMastery,
+        isCompleted: false,
+      };
+    }
+
+    // Check completion criteria for target concept
+    isCompleted =
+      !isCurrentDescent &&
+      totalAnswered >= 3 &&
+      (nextMastery === 'PROFICIENT' || nextMastery === 'MASTERED' || evaluation.score >= 0.8);
 
     if (isCompleted) {
       await this.supabase
@@ -280,7 +428,7 @@ export class TutorEngine {
         })
         .eq('id', sessionId);
     } else {
-      // Generate next question
+      // Generate next question on target concept
       context.masteryState = nextMastery;
       context.recentInteractions.push({
         interactionType: interaction.interaction_type,
@@ -399,6 +547,69 @@ export class TutorEngine {
       interactions: interactions || [],
       masteryState: knowledge?.mastery_state || 'UNKNOWN',
     };
+  }
+
+  /**
+   * Fetch all prerequisites for a given concept.
+   */
+  private async getPrerequisites(conceptId: string): Promise<Array<{ id: string; name: string }>> {
+    const { data: rels } = await this.supabase
+      .from('concept_relationships')
+      .select('source_concept_id')
+      .eq('target_concept_id', conceptId)
+      .eq('relationship_type', 'prerequisite');
+
+    if (!rels || rels.length === 0) return [];
+
+    const ids = rels.map((r) => r.source_concept_id);
+    const { data: prereqs } = await this.supabase
+      .from('concepts')
+      .select('id, name')
+      .in('id', ids);
+
+    return prereqs || [];
+  }
+
+  /**
+   * Find the first unmastered prerequisite for a user and target concept.
+   */
+  private async findUnmasteredPrerequisite(userId: string, targetConceptId: string) {
+    const { data: rels } = await this.supabase
+      .from('concept_relationships')
+      .select('source_concept_id')
+      .eq('target_concept_id', targetConceptId)
+      .eq('relationship_type', 'prerequisite');
+
+    if (!rels || rels.length === 0) return null;
+
+    const prereqIds = rels.map((r) => r.source_concept_id);
+
+    // Fetch student's knowledge for all these prerequisites
+    const { data: knowledgeRows } = await this.supabase
+      .from('student_knowledge')
+      .select('concept_id, mastery_state, evidence_score')
+      .eq('user_id', userId)
+      .in('concept_id', prereqIds);
+
+    const knowledgeMap = new Map((knowledgeRows || []).map((k) => [k.concept_id, k]));
+
+    // Find any prerequisite that is not PROFICIENT or MASTERED
+    for (const prereqId of prereqIds) {
+      const k = knowledgeMap.get(prereqId);
+      const isMastered =
+        k && (k.mastery_state === 'PROFICIENT' || k.mastery_state === 'MASTERED') && k.evidence_score >= 0.7;
+      if (!isMastered) {
+        const { data: prereqConcept } = await this.supabase
+          .from('concepts')
+          .select('id, name, description, difficulty, learning_objectives')
+          .eq('id', prereqId)
+          .single();
+        if (prereqConcept) {
+          return prereqConcept;
+        }
+      }
+    }
+    return null;
   }
 
   /**

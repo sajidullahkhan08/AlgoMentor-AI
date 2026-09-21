@@ -103,11 +103,25 @@ export interface TutorSessionResponse {
   };
   currentInteraction: {
     id: string;
-    interaction_type: 'multiple_choice' | 'short_text' | 'prediction' | 'code_completion';
+    interaction_type:
+      | 'multiple_choice'
+      | 'multiple_select'
+      | 'ordering'
+      | 'short_text'
+      | 'prediction'
+      | 'code_completion';
     question: {
       questionText: string;
       options?: string[];
+      correctOptionIndex?: number;
+      correctOptionIndices?: number[];
+      orderingItems?: string[];
+      correctOrder?: number[];
       objective?: string;
+      isPrerequisiteDescent?: boolean;
+      descentReason?: string;
+      conceptId?: string;
+      conceptName?: string;
     };
     hint_level: number;
     sort_order: number;
@@ -115,9 +129,26 @@ export interface TutorSessionResponse {
   history: Array<{
     id: string;
     interaction_type: string;
-    question: { questionText: string };
-    student_response: { answer: string };
-    evaluation: { isCorrect: boolean; feedback: string };
+    question: {
+      questionText: string;
+      options?: string[];
+      orderingItems?: string[];
+      isPrerequisiteDescent?: boolean;
+      descentReason?: string;
+      conceptName?: string;
+    };
+    student_response: { answer: string; confidence?: string };
+    evaluation: {
+      isCorrect: boolean;
+      feedback: string;
+      score: number;
+      recommendation?: string;
+      detectedMisconception?: string | null;
+      calibration?: {
+        type: 'overconfident' | 'underconfident' | 'calibrated';
+        message: string;
+      };
+    };
   }>;
   masteryState: string;
 }
@@ -145,6 +176,10 @@ export async function submitTutorResponse(
     score: number;
     recommendation: string;
     detectedMisconception?: string | null;
+    calibration?: {
+      type: 'overconfident' | 'underconfident' | 'calibrated';
+      message: string;
+    };
   };
   nextInteraction: any;
   masteryState: string;

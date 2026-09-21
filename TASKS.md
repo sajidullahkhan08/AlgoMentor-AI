@@ -100,14 +100,15 @@ Tasks:
 
 ---
 
-# NEXT — Phase 4: Adaptive Tutoring Expansion
+# NEXT — Phase 4: Adaptive Tutoring & Interactive Learning
 
-- [ ] Automated prerequisite descent when student repeatedly struggles
-- [ ] Adaptive difficulty adjustment based on student performance history
-- [ ] Multiple selection and ordering interaction types
-- [ ] Visual interaction components for array and pointer tracing
-- [ ] Confidence vs accuracy calibration metrics
-- [ ] Misconception catalog tracking across sessions
+- [x] Automated prerequisite descent when student repeatedly struggles (`AI_TUTOR_ENGINE.md` §4, `DEC-003`)
+- [x] Automated prerequisite ascent back to target concept upon demonstrated mastery
+- [x] Multiple selection (`multiple_select`) and step ordering (`ordering`) interaction types
+- [x] Confidence vs accuracy calibration metrics and feedback badges
+- [x] Adaptive interaction progression and difficulty scaling in TutorEngine
+- [ ] Visual interaction components for array and pointer tracing (Phase 5)
+- [ ] Misconception catalog tracking across sessions (Phase 5)
 
 ---
 

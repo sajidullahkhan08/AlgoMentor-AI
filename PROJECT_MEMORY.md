@@ -54,7 +54,7 @@ Students should be able to respond through:
 
 Status:
 
-**Phase 3 — First AI Tutor Vertical Slice (Complete)**
+**Phase 4 — Adaptive Tutoring & Multi-Type Interactions (Complete)**
 
 ### What exists
 
@@ -64,16 +64,28 @@ Status:
   - Database migrations applied (9 tables, RLS, indexes, seed data verified in Supabase)
   - AI Provider Layer: `AIProvider` interface with `GeminiProvider` (@google/genai) and `MockAIProvider` fallback
   - `TutorEngine` service: session orchestration, Socratic question generation, reasoning evaluation, hint ladder (Levels 1–7), and student mastery transitions
+  - **Prerequisite Descent and Ascent**: Automated graph search on `concept_relationships` for missing prerequisites, descent question generation, prerequisite mastery updates, and ascent back to target concept
+  - **Confidence vs. Accuracy Calibration**: Engine computes overconfidence / underconfidence diagnostics based on student self-reported confidence vs score
+  - Automated test suite: `backend/src/test_adaptive_tutoring.ts` (21 assertions passed via `npm test`)
 - `mobile/` — React Native + Expo SDK 57
   - Supabase Auth (client-side, per DEC-PEN-02)
   - Auth screens (login, register)
   - Curriculum browsing (dashboard → course → topic → concept)
-  - Interactive Socratic AI Tutor Session screen (`/(main)/tutor/[id]`) with MCQ cards, reasoning text input, confidence chips, hint ladder, and evaluation feedback
+  - Interactive Socratic AI Tutor Session screen (`/(main)/tutor/[id]`) with:
+    - Multiple Choice selectable cards
+    - **Multiple Selection (`multiple_select`)** checkbox options
+    - **Step Ordering / Sequence (`ordering`)** interactive cards with up/down arrows
+    - Short text reasoning input
+    - **Prerequisite Descent Drill banner** & history badges
+    - **Confidence Calibration diagnostic badges** (trap warnings & encouragement)
+    - Self-reported confidence chip selector
+    - Multi-level hint ladder card
+    - Socratic evaluation feedback and session completion review
   - API client with auto JWT injection for all curriculum and tutor endpoints
 
 ### What is next
 
-- Phase 4: Adaptive tutoring expansion (automated prerequisite descent, misconception catalog, calibration metrics)
+- Phase 5: Problem Solving & Visual Interactivity (LeetCode-style problem browser, visual arrays/pointer tracing, code runner)
 
 ---
 

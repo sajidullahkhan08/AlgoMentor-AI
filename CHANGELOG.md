@@ -31,6 +31,28 @@ All meaningful project changes should be recorded here.
 
 ---
 
+# 2026-09-21 — Phase 4: Adaptive Tutoring & Multi-Type Interactions
+
+### Added
+
+- Automated **Prerequisite Descent and Ascent** (`AI_TUTOR_ENGINE.md` §4, `DEC-003`):
+  - `TutorEngine.findUnmasteredPrerequisite`: Graph traversal over `concept_relationships` to detect unmastered prerequisite gaps.
+  - Automated descent trigger: Generates targeted prerequisite questions when student struggles or AI recommends descent.
+  - Automated ascent trigger: Updates prerequisite mastery in `student_knowledge` and seamlessly transitions back to the target concept upon score >= 0.8.
+  - Mobile UI Prerequisite Drill banner on active questions and badge on historical interactions.
+- Multiple Interaction Types:
+  - **Multiple Selection** (`multiple_select`): Checkbox option cards supporting multi-select logic and validation.
+  - **Step Ordering / Sequence** (`ordering`): Interactive arrangement of algorithmic operations with up/down sequence controls.
+- **Confidence vs. Accuracy Calibration** (`AI_TUTOR_ENGINE.md` §7):
+  - Detects overconfidence (`confident` + wrong) to warn about subtle algorithmic traps.
+  - Detects underconfidence (`unsure` + correct) to encourage student analytical confidence.
+  - Visual calibration badges displayed in evaluation cards on mobile.
+- Automated Test Suite:
+  - `backend/src/test_adaptive_tutoring.ts`: 21 automated end-to-end assertions testing MCQ, multi-select, ordering, calibration, descent, ascent, and hints.
+  - `npm test` script in `backend/package.json`.
+
+---
+
 # 2026-09-20 — Phase 3: First AI Tutor Vertical Slice
 
 ### Added
