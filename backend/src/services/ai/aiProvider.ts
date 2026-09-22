@@ -75,6 +75,16 @@ export interface GeneratedHint {
   hintContent: string;
 }
 
+export interface CodeReviewResult {
+  isOptimal: boolean;
+  timeComplexity: string;
+  spaceComplexity: string;
+  feedback: string;
+  detectedIssues: string[];
+  socraticQuestions: string[];
+  nextHint: string;
+}
+
 export interface AIProvider {
   /**
    * Generate the next Socratic question or task for a concept.
@@ -98,4 +108,15 @@ export interface AIProvider {
     question: GeneratedQuestion,
     hintLevel: number
   ): Promise<GeneratedHint>;
+
+  /**
+   * Socratic code review analyzing time/space complexity, edge cases, and structural invariants.
+   */
+  reviewCode(
+    problem: { title: string; description: string; constraints: string[] },
+    code: string,
+    language: string,
+    testSummary: { passed: number; total: number; failedTests: any[] }
+  ): Promise<CodeReviewResult>;
 }
+

@@ -16,6 +16,7 @@ import { conceptRoutes } from './routes/concepts';
 import { profileRoutes } from './routes/profiles';
 import { healthRoutes } from './routes/health';
 import tutorRoutes from './routes/tutor';
+import problemRoutes from './routes/problems';
 import { authenticate } from './middleware/authenticate';
 
 const app = express();
@@ -30,6 +31,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/concepts', conceptRoutes);
 app.use('/api/profiles', profileRoutes);
 app.use('/api/tutor', authenticate, tutorRoutes);
+app.use('/api/problems', problemRoutes);
 
 // --- Error handling (must be last) ---
 app.use(errorHandler);

@@ -292,22 +292,27 @@ These decisions are intentionally postponed. They should be resolved when their 
 
 # DEC-DEF-01 — Code Execution Environment
 
-Date: 2026-09-19
+Date: 2026-09-22
 
-Status: Deferred (until Phase 5 — Problem Solving)
+Status: **Accepted**
 
-Question:
+Decision:
 
-How will student code be executed and tested?
+**Server-Side Sandboxed Node.js VM Context with Timeout Enforcement and Isolated Execution.**
 
-Candidates:
+Reason:
 
-- Client-side WASM sandbox (e.g., Pyodide, wasm-based interpreters)
-- Third-party execution service (e.g., Judge0)
-- Server-side sandboxed container
-- AI-based evaluation without actual execution
+- Preserves the strict **Free-First (DEC-006)** constraint — eliminates dependencies on paid third-party execution APIs (e.g. Judge0 paid plans, external microservices).
+- Strict Sandboxing:
+  - Context isolation using Node.js `vm.createContext`.
+  - Global namespace is sanitized (`process`, `require`, `fs`, `fetch`, `XMLHttpRequest`, `WebSocket`, `ChildProcess`, `Buffer` are explicitly stripped/denied).
+  - Strict wall-clock execution timeout (1,000ms max per test case) guarding against infinite loops / exponential recursion.
+  - Safe memory ceiling and input/output deep JSON comparisons.
+- Combined with **Socratic AI Code Reviewer** (`GeminiProvider` / `MockAIProvider`):
+  - Sandboxed execution validates correctness against test suites.
+  - AI Reviewer analyzes time complexity ($O(n)$ vs $O(\log n)$), space complexity, boundary invariants, and generates Socratic reflection prompts without executing code directly in the AI model.
 
-See `SECURITY.md` §7 for security constraints.
+Referenced in: `SECURITY.md` §7, `AI_TUTOR_ENGINE.md`, `TECH_STACK.md`.
 
 ---
 

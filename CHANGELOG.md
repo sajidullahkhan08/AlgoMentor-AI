@@ -29,6 +29,40 @@ All meaningful project changes should be recorded here.
 ```
 
 
+# 2026-09-22 — Phase 5: Problem Solving & DSA Patterns
+
+### Added
+
+- **Sandboxed Code Execution Engine** (`backend/src/services/codeRunner.ts`):
+  - Isolated Node.js `vm` context with sanitized globals (`process`, `require`, `fs`, `network` stripped).
+  - Strict 1,000ms timeout per test case against infinite loops.
+  - Safe function extraction and structured input/output comparison.
+- **Socratic AI Code Reviewer** (`GeminiProvider` with `gemini-3.6-flash` and `MockAIProvider`):
+  - Evaluates time and space complexity ($O(n)$ vs $O(\log n)$), detects non-optimal linear scans.
+  - Generates Socratic invariant reflection questions, missed edge cases, and algorithmic improvement suggestions.
+  - Defensive fallback automatically catches API outages/rate limits and uses `MockAIProvider`.
+- **Database Schema & Seed Data** (`backend/supabase/migrations/003_problems_and_patterns.sql`):
+  - `patterns`, `problems`, `problem_concepts`, `problem_attempts`, `student_misconceptions` tables with RLS and indexes.
+  - Curated seed problems: Binary Search [LC 704], Search a 2D Matrix [LC 74], Find Minimum in Rotated Sorted Array [LC 153].
+  - Curated patterns: Binary Search On Sorted Array, Search Space Reduction, Two Pointers.
+- **Problem Solving & Patterns API** (`backend/src/routes/problems.ts`, `backend/src/services/problemsService.ts`):
+  - `GET /api/problems`, `GET /api/problems/patterns`, `GET /api/problems/:id`
+  - `POST /api/problems/:id/run` (sample test execution)
+  - `POST /api/problems/:id/submit` (test execution + Socratic AI Code Review + attempt logging)
+  - `POST /api/problems/:id/hint` (5-level graduated hint ladder)
+- **Mobile Interactive Problem Workspace**:
+  - `VisualArrayTrace.tsx`: Step-by-step interactive array invariant tracer with Left/Mid/Right pointer markers, search space halving visualization, and condition explanation.
+  - `problems/index.tsx`: Catalog with search, difficulty pills, and Pattern explorer tab showing recognition signals and algorithmic invariants.
+  - `problems/[id].tsx`: Multi-tab workspace (Problem Statement & Trace, Monospace Code Editor, Test Results, Socratic AI Review & Hints).
+  - Dashboard banner card linking directly to DSA Problem Solving.
+- **Automated Verification**:
+  - `backend/src/test_problem_solving.ts`: 18 automated assertions validating catalog, runner, timeout/syntax handling, and Socratic code review.
+  - Combined `npm test` running 39/39 passing test assertions.
+
+### Architectural
+
+- Resolved `DEC-DEF-01`: Accepted server-side sandboxed Node.js VM context with timeout enforcement for free-first execution.
+
 ---
 
 # 2026-09-21 — Phase 4: Adaptive Tutoring & Multi-Type Interactions

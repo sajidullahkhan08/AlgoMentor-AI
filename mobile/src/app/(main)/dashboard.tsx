@@ -87,6 +87,28 @@ export default function DashboardScreen() {
           </Text>
         </View>
 
+        {/* DSA Patterns & Problem Solving Banner */}
+        <TouchableOpacity
+          style={styles.problemBannerCard}
+          onPress={() => router.push('/(main)/problems/index' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.problemBannerHeader}>
+            <View style={styles.problemIconBadge}>
+              <Text style={styles.problemIcon}>⚡</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.problemBannerTitle}>DSA Problem Solving</Text>
+              <Text style={styles.problemBannerSubtitle}>
+                Master algorithmic patterns & LeetCode problems with Socratic AI feedback
+              </Text>
+            </View>
+          </View>
+          <View style={styles.problemBannerFooter}>
+            <Text style={styles.problemBannerAction}>Solve Problems & Trace Invariants →</Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Courses section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Courses</Text>
@@ -297,5 +319,51 @@ const styles = StyleSheet.create({
     color: '#A0A0B8',
     fontSize: 16,
     fontWeight: '500',
+  },
+  problemBannerCard: {
+    backgroundColor: '#131b2e',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 24,
+    borderWidth: 1.5,
+    borderColor: '#1d4ed8',
+  },
+  problemBannerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  problemIconBadge: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#1e3a8a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  problemIcon: {
+    fontSize: 22,
+  },
+  problemBannerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#f8fafc',
+  },
+  problemBannerSubtitle: {
+    fontSize: 12,
+    color: '#94a3b8',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  problemBannerFooter: {
+    marginTop: 12,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#1e293b',
+  },
+  problemBannerAction: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#38bdf8',
   },
 });

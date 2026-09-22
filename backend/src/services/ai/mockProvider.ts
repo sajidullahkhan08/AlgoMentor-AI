@@ -13,6 +13,7 @@ import {
   StudentResponse,
   EvaluationResult,
   GeneratedHint,
+  CodeReviewResult,
 } from './aiProvider';
 
 const HINT_TITLES: Record<number, string> = {
@@ -353,6 +354,87 @@ export class MockAIProvider implements AIProvider {
       hintLevel: level,
       hintTitle: title,
       hintContent: hints[level] || hints[1],
+    };
+  }
+
+  async reviewCode(
+    problem: { title: string; description: string; constraints: string[] },
+    code: string,
+    language: string,
+    testSummary: { passed: number; total: number; failedTests: any[] }
+  ): Promise<CodeReviewResult> {
+    const codeLower = code.toLowerCase();
+
+    const usesLinearScan =
+      (codeLower.includes('for ') || codeLower.includes('for(')) &&
+      !codeLower.includes('mid') &&
+      (codeLower.includes('indexof') || codeLower.includes('find(') || codeLower.includes('return i'));
+
+    const usesLoopCondition = codeLower.includes('left <= right') || codeLower.includes('left < right');
+    const usesMidCalculation = codeLower.includes('mid') && (codeLower.includes('left +') || codeLower.includes('/ 2') || codeLower.includes('// 2'));
+    const handlesBoundaryShift = codeLower.includes('mid + 1') || codeLower.includes('mid - 1');
+
+    if (testSummary.passed === testSummary.total && testSummary.total > 0) {
+      if (usesLinearScan) {
+        return {
+          isOptimal: false,
+          timeComplexity: 'O(n)',
+          spaceComplexity: 'O(1)',
+          feedback:
+            '⚠️ Functional but Sub-optimal: Your code passed the test cases, but it uses an O(n) linear scan! The problem requires O(log n) logarithmic time. Take advantage of the array being sorted to eliminate half the candidates per comparison.',
+          detectedIssues: ['Linear O(n) search instead of O(log n) binary search'],
+          socraticQuestions: [
+            'If the array is already sorted, do you need to inspect every element sequentially?',
+            'What happens if the array has 10,000,000 elements? How many comparisons would binary search take compared to your loop?',
+          ],
+          nextHint: 'Calculate a midpoint `mid = left + Math.floor((right - left) / 2)` and compare target with `nums[mid]`.',
+        };
+      }
+
+      return {
+        isOptimal: true,
+        timeComplexity: 'O(log n)',
+        spaceComplexity: 'O(1)',
+        feedback:
+          '🌟 Optimal Solution! Excellent binary search implementation. You correctly maintain the search interval boundaries, avoid integer overflow in midpoint calculation, and achieve O(log n) time complexity.',
+        detectedIssues: [],
+        socraticQuestions: [
+          'What would happen if the array contained duplicate target values? How would you find the FIRST occurrence?',
+        ],
+        nextHint: 'Challenge: Try solving "Find First and Last Position of Element in Sorted Array" using this exact template.',
+      };
+    }
+
+    // Failed some or all tests
+    const detectedIssues: string[] = [];
+    const socraticQuestions: string[] = [];
+
+    if (!usesLoopCondition) {
+      detectedIssues.push('Search space boundary condition missing or incorrect (should be left <= right or left < right)');
+      socraticQuestions.push('What is the terminating condition for your search window? Can the window ever collapse when left exceeds right?');
+    }
+
+    if (!usesMidCalculation) {
+      detectedIssues.push('Midpoint index calculation missing');
+      socraticQuestions.push('How do you divide the remaining search range in half each iteration?');
+    }
+
+    if (!handlesBoundaryShift) {
+      detectedIssues.push('Boundary pointer adjustment may cause an infinite loop (make sure to use mid + 1 or mid - 1)');
+      socraticQuestions.push('If target is not at mid, does mid still need to be in the remaining search space?');
+    }
+
+    return {
+      isOptimal: false,
+      timeComplexity: 'Sub-optimal or Incomplete',
+      spaceComplexity: 'O(1)',
+      feedback: `Your solution passed ${testSummary.passed}/${testSummary.total} test cases. Focus on maintaining loop invariants: ensure pointers shrink the window each step without skipping the target.`,
+      detectedIssues,
+      socraticQuestions:
+        socraticQuestions.length > 0
+          ? socraticQuestions
+          : ['Walk through a 2-element array example on paper: nums = [2, 5], target = 5. Where do your pointers land?'],
+      nextHint: 'Initialize `let left = 0, right = nums.length - 1;` and loop `while (left <= right)`.',
     };
   }
 }

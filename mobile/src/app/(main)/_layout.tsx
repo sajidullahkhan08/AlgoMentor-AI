@@ -30,6 +30,14 @@ export default function MainLayout() {
         name="concept/[id]"
         options={{ title: 'Concept' }}
       />
+      <Stack.Screen
+        name="problems/index"
+        options={{ title: 'Problems & Patterns' }}
+      />
+      <Stack.Screen
+        name="problems/[id]"
+        options={{ title: 'Problem Workspace' }}
+      />
     </Stack>
   );
 }

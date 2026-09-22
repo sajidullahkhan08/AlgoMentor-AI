@@ -54,38 +54,32 @@ Students should be able to respond through:
 
 Status:
 
-**Phase 4 — Adaptive Tutoring & Multi-Type Interactions (Complete)**
+**Phase 5 — Problem Solving & DSA Patterns (Complete)**
 
 ### What exists
 
 - `backend/` — Express 5 + TypeScript backend with Supabase integration
   - Auth middleware (JWT validation)
-  - Routes: health, courses, concepts, profiles, and tutor
-  - Database migrations applied (9 tables, RLS, indexes, seed data verified in Supabase)
-  - AI Provider Layer: `AIProvider` interface with `GeminiProvider` (@google/genai) and `MockAIProvider` fallback
-  - `TutorEngine` service: session orchestration, Socratic question generation, reasoning evaluation, hint ladder (Levels 1–7), and student mastery transitions
-  - **Prerequisite Descent and Ascent**: Automated graph search on `concept_relationships` for missing prerequisites, descent question generation, prerequisite mastery updates, and ascent back to target concept
-  - **Confidence vs. Accuracy Calibration**: Engine computes overconfidence / underconfidence diagnostics based on student self-reported confidence vs score
-  - Automated test suite: `backend/src/test_adaptive_tutoring.ts` (21 assertions passed via `npm test`)
+  - Routes: health, courses, concepts, profiles, tutor, and problems
+  - Database migrations: 001_initial_schema, 002_adaptive_tutoring, 003_problems_and_patterns
+  - AI Provider Layer: `AIProvider` interface with `GeminiProvider` (`gemini-3.6-flash` via @google/genai) and `MockAIProvider` fallback
+  - `CodeRunnerService`: Isolated Node.js `vm` sandbox without process/fs/network access, 1,000ms execution timeout per test case, regex user function extraction
+  - `ProblemsService`: Curated LeetCode problems (e.g. Binary Search, Search 2D Matrix, Find Minimum in Rotated Sorted Array) and DSA patterns (Binary Search, Search Space Reduction, Two Pointers)
+  - Socratic AI Code Reviewer: Evaluates optimality, time & space complexity ($O(\log n)$ vs $O(n)$ linear scan penalty), edge cases, and algorithmic invariant reflection questions
+  - Automated test suites: `test_adaptive_tutoring.ts` (21 assertions) and `test_problem_solving.ts` (18 assertions) — all 39 assertions passing via `npm test`
 - `mobile/` — React Native + Expo SDK 57
   - Supabase Auth (client-side, per DEC-PEN-02)
   - Auth screens (login, register)
   - Curriculum browsing (dashboard → course → topic → concept)
-  - Interactive Socratic AI Tutor Session screen (`/(main)/tutor/[id]`) with:
-    - Multiple Choice selectable cards
-    - **Multiple Selection (`multiple_select`)** checkbox options
-    - **Step Ordering / Sequence (`ordering`)** interactive cards with up/down arrows
-    - Short text reasoning input
-    - **Prerequisite Descent Drill banner** & history badges
-    - **Confidence Calibration diagnostic badges** (trap warnings & encouragement)
-    - Self-reported confidence chip selector
-    - Multi-level hint ladder card
-    - Socratic evaluation feedback and session completion review
-  - API client with auto JWT injection for all curriculum and tutor endpoints
+  - Interactive Socratic AI Tutor Session screen (`/(main)/tutor/[id]`) with MCQ, multi-select, step ordering, prerequisite descent/ascent, and confidence calibration
+  - **VisualArrayTrace**: Step-by-step interactive array invariant tracer showing Left/Mid/Right pointers, search space elimination, and condition explanations
+  - **DSA Problem & Pattern Catalog (`/(main)/problems/index`)**: Search, difficulty filtering (Easy/Medium/Hard), pattern chips, and deep-dive Pattern Explorer tab (recognition signals, key invariants, optimal complexities)
+  - **Problem Workspace (`/(main)/problems/[id]`)**: Multi-tab environment featuring Problem Statement with embedded `VisualArrayTrace`, Monospace Code Editor, Test Results runner, Socratic AI Review panel, and 5-level Graduated Hint Ladder
+  - Dashboard banner card directly launching Problem Solving
 
 ### What is next
 
-- Phase 5: Problem Solving & Visual Interactivity (LeetCode-style problem browser, visual arrays/pointer tracing, code runner)
+- Phase 6: Interactive Visualizations & Mental Models (interactive tree traversals, graph BFS/DFS visualizers with stack/queue state, DP state matrices)
 
 ---
 

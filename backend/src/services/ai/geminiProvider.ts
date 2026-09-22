@@ -13,7 +13,9 @@ import {
   StudentResponse,
   EvaluationResult,
   GeneratedHint,
+  CodeReviewResult,
 } from './aiProvider';
+import { MockAIProvider } from './mockProvider';
 
 const SYSTEM_INSTRUCTION = `You are an expert, adaptive Socratic computer science tutor in AlgoMentor AI.
 Your teaching philosophy:
@@ -32,8 +34,9 @@ Your teaching philosophy:
 export class GeminiProvider implements AIProvider {
   private ai: GoogleGenAI;
   private model: string;
+  private fallbackMock = new MockAIProvider();
 
-  constructor(apiKey: string, model: string = 'gemini-2.5-flash') {
+  constructor(apiKey: string, model: string = 'gemini-3.6-flash') {
     this.ai = new GoogleGenAI({ apiKey });
     this.model = model;
   }
@@ -53,62 +56,67 @@ Choose the most effective interaction type:
 - 'ordering': for putting algorithmic steps in order.
 - 'short_text': for asking the student to explain why.`;
 
-    const response = await this.ai.models.generateContent({
-      model: this.model,
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            interactionType: {
-              type: Type.STRING,
-              enum: ['multiple_choice', 'multiple_select', 'ordering', 'short_text', 'prediction', 'code_completion'],
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              interactionType: {
+                type: Type.STRING,
+                enum: ['multiple_choice', 'multiple_select', 'ordering', 'short_text', 'prediction', 'code_completion'],
+              },
+              questionText: { type: Type.STRING },
+              options: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'List of choices if interactionType is multiple_choice or multiple_select',
+              },
+              correctOptionIndex: {
+                type: Type.INTEGER,
+                description: 'Zero-based index of the single correct choice if multiple_choice',
+              },
+              correctOptionIndices: {
+                type: Type.ARRAY,
+                items: { type: Type.INTEGER },
+                description: 'Zero-based indices of all correct choices if multiple_select',
+              },
+              orderingItems: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: 'List of items to be arranged in order if interactionType is ordering',
+              },
+              correctOrder: {
+                type: Type.ARRAY,
+                items: { type: Type.INTEGER },
+                description: 'Correct zero-based index sequence of orderingItems',
+              },
+              expectedEvidence: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              objective: { type: Type.STRING },
             },
-            questionText: { type: Type.STRING },
-            options: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'List of choices if interactionType is multiple_choice or multiple_select',
-            },
-            correctOptionIndex: {
-              type: Type.INTEGER,
-              description: 'Zero-based index of the single correct choice if multiple_choice',
-            },
-            correctOptionIndices: {
-              type: Type.ARRAY,
-              items: { type: Type.INTEGER },
-              description: 'Zero-based indices of all correct choices if multiple_select',
-            },
-            orderingItems: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-              description: 'List of items to be arranged in order if interactionType is ordering',
-            },
-            correctOrder: {
-              type: Type.ARRAY,
-              items: { type: Type.INTEGER },
-              description: 'Correct zero-based index sequence of orderingItems',
-            },
-            expectedEvidence: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
-            objective: { type: Type.STRING },
+            required: ['interactionType', 'questionText', 'expectedEvidence', 'objective'],
           },
-          required: ['interactionType', 'questionText', 'expectedEvidence', 'objective'],
         },
-      },
-    });
+      });
 
-    const text = response.text || '{}';
-    const parsed = JSON.parse(text) as GeneratedQuestion;
-    parsed.conceptId = context.conceptId;
-    parsed.conceptName = context.conceptName;
-    parsed.isPrerequisiteDescent = context.isPrerequisiteDescent;
-    parsed.descentReason = context.descentReason;
-    return parsed;
+      const text = response.text || '{}';
+      const parsed = JSON.parse(text) as GeneratedQuestion;
+      parsed.conceptId = context.conceptId;
+      parsed.conceptName = context.conceptName;
+      parsed.isPrerequisiteDescent = context.isPrerequisiteDescent;
+      parsed.descentReason = context.descentReason;
+      return parsed;
+    } catch (err: any) {
+      console.warn('[GeminiProvider] generateQuestion failed, using mock fallback:', err.message);
+      return this.fallbackMock.generateQuestion(context);
+    }
   }
 
   async evaluateResponse(
@@ -142,40 +150,45 @@ Evaluate the student's answer:
    - 'probe_deeper': if partially understood.
    - 'descend_prerequisite': if fundamentally lacking prerequisite intuition.`;
 
-    const res = await this.ai.models.generateContent({
-      model: this.model,
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            isCorrect: { type: Type.BOOLEAN },
-            understandingDemonstrated: { type: Type.BOOLEAN },
-            score: { type: Type.NUMBER, description: 'Score between 0.0 and 1.0' },
-            feedback: { type: Type.STRING, description: 'Socratic feedback message' },
-            detectedMisconception: { type: Type.STRING, nullable: true },
-            calibration: {
-              type: Type.OBJECT,
-              properties: {
-                type: { type: Type.STRING, enum: ['overconfident', 'underconfident', 'calibrated'] },
-                message: { type: Type.STRING },
+    try {
+      const res = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              isCorrect: { type: Type.BOOLEAN },
+              understandingDemonstrated: { type: Type.BOOLEAN },
+              score: { type: Type.NUMBER, description: 'Score between 0.0 and 1.0' },
+              feedback: { type: Type.STRING, description: 'Socratic feedback message' },
+              detectedMisconception: { type: Type.STRING, nullable: true },
+              calibration: {
+                type: Type.OBJECT,
+                properties: {
+                  type: { type: Type.STRING, enum: ['overconfident', 'underconfident', 'calibrated'] },
+                  message: { type: Type.STRING },
+                },
+                required: ['type', 'message'],
               },
-              required: ['type', 'message'],
+              recommendation: {
+                type: Type.STRING,
+                enum: ['advance', 'probe_deeper', 'descend_prerequisite', 'ascend_target', 'retry'],
+              },
             },
-            recommendation: {
-              type: Type.STRING,
-              enum: ['advance', 'probe_deeper', 'descend_prerequisite', 'ascend_target', 'retry'],
-            },
+            required: ['isCorrect', 'understandingDemonstrated', 'score', 'feedback', 'recommendation'],
           },
-          required: ['isCorrect', 'understandingDemonstrated', 'score', 'feedback', 'recommendation'],
         },
-      },
-    });
+      });
 
-    const text = res.text || '{}';
-    return JSON.parse(text) as EvaluationResult;
+      const text = res.text || '{}';
+      return JSON.parse(text) as EvaluationResult;
+    } catch (err: any) {
+      console.warn('[GeminiProvider] evaluateResponse failed, using mock fallback:', err.message);
+      return this.fallbackMock.evaluateResponse(context, question, response);
+    }
   }
 
   async generateHint(
@@ -202,25 +215,99 @@ Hint Level: ${level} (${targetDescription})
 
 Generate a hint strictly matching this hint level. Do not skip levels or reveal more than this level allows.`;
 
-    const res = await this.ai.models.generateContent({
-      model: this.model,
-      contents: prompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            hintLevel: { type: Type.INTEGER },
-            hintTitle: { type: Type.STRING },
-            hintContent: { type: Type.STRING },
+    try {
+      const res = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              hintLevel: { type: Type.INTEGER },
+              hintTitle: { type: Type.STRING },
+              hintContent: { type: Type.STRING },
+            },
+            required: ['hintLevel', 'hintTitle', 'hintContent'],
           },
-          required: ['hintLevel', 'hintTitle', 'hintContent'],
         },
-      },
-    });
+      });
 
-    const text = res.text || '{}';
-    return JSON.parse(text) as GeneratedHint;
+      const text = res.text || '{}';
+      return JSON.parse(text) as GeneratedHint;
+    } catch (err: any) {
+      console.warn('[GeminiProvider] generateHint failed, using mock fallback:', err.message);
+      return this.fallbackMock.generateHint(context, question, hintLevel);
+    }
+  }
+
+  async reviewCode(
+    problem: { title: string; description: string; constraints: string[] },
+    code: string,
+    language: string,
+    testSummary: { passed: number; total: number; failedTests: any[] }
+  ): Promise<CodeReviewResult> {
+    const prompt = `Problem Title: ${problem.title}
+Problem Description: ${problem.description}
+Constraints: ${problem.constraints.join(', ')}
+Programming Language: ${language}
+Student Solution:
+\`\`\`${language}
+${code}
+\`\`\`
+Test Results: ${testSummary.passed}/${testSummary.total} tests passed.
+Failed Tests: ${JSON.stringify(testSummary.failedTests.slice(0, 3))}
+
+Task: Perform a Socratic code review of the student's solution.
+1. Evaluate time and space complexity (e.g. O(log n), O(n), O(1)).
+2. Is the algorithm optimal for this problem?
+3. Socratic Feedback: Praise sound invariants, ask questions about algorithmic inefficiencies or edge-case oversights.
+4. DO NOT give away the complete code. Offer questions and a graduated hint.`;
+
+    try {
+      const res = await this.ai.models.generateContent({
+        model: this.model,
+        contents: prompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              isOptimal: { type: Type.BOOLEAN },
+              timeComplexity: { type: Type.STRING },
+              spaceComplexity: { type: Type.STRING },
+              feedback: { type: Type.STRING },
+              detectedIssues: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              socraticQuestions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              nextHint: { type: Type.STRING },
+            },
+            required: [
+              'isOptimal',
+              'timeComplexity',
+              'spaceComplexity',
+              'feedback',
+              'detectedIssues',
+              'socraticQuestions',
+              'nextHint',
+            ],
+          },
+        },
+      });
+
+      const text = res.text || '{}';
+      return JSON.parse(text) as CodeReviewResult;
+    } catch (err: any) {
+      console.warn('[GeminiProvider] reviewCode failed, using mock fallback:', err.message);
+      return this.fallbackMock.reviewCode(problem, code, language, testSummary);
+    }
   }
 }
+

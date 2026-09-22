@@ -20,7 +20,7 @@ export function getAIProvider(): AIProvider {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (apiKey && apiKey.trim() !== '' && apiKey !== 'your_gemini_api_key') {
-    console.log('[AlgoMentor] Initializing Gemini AI Provider (model: gemini-2.5-flash)');
+    console.log('[AlgoMentor] Initializing Gemini AI Provider (model: gemini-3.6-flash)');
     _provider = new GeminiProvider(apiKey);
   } else {
     console.log('[AlgoMentor] GEMINI_API_KEY not set — using deterministic MockAIProvider fallback');

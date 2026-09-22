@@ -100,37 +100,26 @@ Tasks:
 
 ---
 
-# NEXT — Phase 4: Adaptive Tutoring & Interactive Learning
+# NEXT — Phase 6: Interactive Visualizations & Mental Models
 
-- [x] Automated prerequisite descent when student repeatedly struggles (`AI_TUTOR_ENGINE.md` §4, `DEC-003`)
-- [x] Automated prerequisite ascent back to target concept upon demonstrated mastery
-- [x] Multiple selection (`multiple_select`) and step ordering (`ordering`) interaction types
-- [x] Confidence vs accuracy calibration metrics and feedback badges
-- [x] Adaptive interaction progression and difficulty scaling in TutorEngine
-- [ ] Visual interaction components for array and pointer tracing (Phase 5)
-- [ ] Misconception catalog tracking across sessions (Phase 5)
+- [ ] Visual tree traversal interactive widget (Pre-order, In-order, Post-order, Level-order)
+- [ ] Graph BFS/DFS traversal step-by-step visualizer with queue/stack state
+- [ ] Two-pointer collision and sliding window interactive animations
+- [ ] Dynamic programming state matrix interactive explorer
+- [ ] Time and space complexity interactive growth comparator ($O(1)$ to $O(2^n)$)
 
 ---
 
 # FUTURE
 
-## Problem Solving
-
-- [ ] Problem browser
-- [ ] Pattern browser
-- [ ] Hint ladder
-- [ ] Code editor
-- [ ] Test cases
-- [ ] AI code review
-
-## Revision
+## Revision & Spaced Repetition (Phase 8)
 
 - [ ] Revision queue
 - [ ] Retrieval questions
 - [ ] Weakness detection
 - [ ] Re-testing
 
-## System Design
+## System Design (Phase 9)
 
 - [ ] Curriculum
 - [ ] Socratic design tutor
@@ -154,6 +143,8 @@ None currently active.
 - [x] Phase 1 project foundation — backend + mobile scaffolding — 2026-09-20
 - [x] Supabase integration & SSR bug fixes — 2026-09-20
 - [x] Phase 3 First Vertical Slice (Tutor Engine + AI Provider + Socratic Mobile Screen) — 2026-09-20
+- [x] Phase 4 Adaptive Tutoring & Multi-interaction Types (MCQ, Multi-select, Ordering, Calibration) — 2026-09-21
+- [x] Phase 5 Problem Solving & DSA Patterns (Sandboxed Node VM Runner, Gemini Socratic AI Code Reviewer, VisualArrayTrace, Problems & Patterns Catalog, Workspace) — 2026-09-22
 
 ---
 

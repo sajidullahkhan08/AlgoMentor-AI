@@ -204,3 +204,149 @@ export async function requestTutorHint(
     body: JSON.stringify({ interactionId }),
   });
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5: Problem Solving & DSA Patterns API
+// ---------------------------------------------------------------------------
+
+export interface Problem {
+  id: string;
+  slug: string;
+  title: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  description: string;
+  examples: Array<{
+    input: string;
+    output: string;
+    explanation?: string;
+  }>;
+  constraints: string[];
+  starter_code: {
+    javascript: string;
+    python?: string;
+  };
+  patterns?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    description: string;
+  }>;
+  concepts?: Array<{
+    id: string;
+    name: string;
+    slug: string;
+  }>;
+  attempts?: Array<{
+    status: 'passed' | 'failed' | 'timeout' | 'error';
+    runtime_ms?: number;
+    created_at: string;
+  }>;
+}
+
+export interface Pattern {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  recognition_signals: string[];
+  visual_mental_model?: string;
+  key_invariants?: string[];
+  time_complexity_optimal?: string;
+  space_complexity_optimal?: string;
+}
+
+export interface CodeTestCaseResult {
+  testIndex: number;
+  input: any[];
+  expectedOutput: any;
+  actualOutput: any;
+  passed: boolean;
+  runtimeMs: number;
+  error?: string;
+}
+
+export interface CodeRunResponse {
+  results: CodeTestCaseResult[];
+  passedCount: number;
+  totalCount: number;
+  allPassed: boolean;
+  error?: string;
+}
+
+export interface CodeSubmitResponse {
+  runResult: CodeRunResponse;
+  review: {
+    isOptimal: boolean;
+    estimatedTimeComplexity: string;
+    estimatedSpaceComplexity: string;
+    feedback: string;
+    socraticQuestions: string[];
+    potentialEdgeCasesMissed: string[];
+    suggestedImprovements: string[];
+  };
+  attemptId: string;
+}
+
+export interface ProblemHintResponse {
+  hintLevel: number;
+  category: string;
+  title: string;
+  hintContent: string;
+}
+
+export async function fetchProblems(filters?: {
+  patternId?: string;
+  difficulty?: string;
+  search?: string;
+}): Promise<{ problems: Problem[] }> {
+  const queryParams = new URLSearchParams();
+  if (filters?.patternId) queryParams.set('patternId', filters.patternId);
+  if (filters?.difficulty) queryParams.set('difficulty', filters.difficulty);
+  if (filters?.search) queryParams.set('search', filters.search);
+
+  const queryString = queryParams.toString();
+  return apiRequest<{ problems: Problem[] }>(
+    `/problems${queryString ? `?${queryString}` : ''}`
+  );
+}
+
+export async function fetchProblem(id: string): Promise<{ problem: Problem }> {
+  return apiRequest<{ problem: Problem }>(`/problems/${id}`);
+}
+
+export async function fetchPatterns(): Promise<{ patterns: Pattern[] }> {
+  return apiRequest<{ patterns: Pattern[] }>('/problems/patterns');
+}
+
+export async function runProblemCode(
+  problemId: string,
+  code: string,
+  language: string = 'javascript'
+): Promise<CodeRunResponse> {
+  return apiRequest<CodeRunResponse>(`/problems/${problemId}/run`, {
+    method: 'POST',
+    body: JSON.stringify({ code, language }),
+  });
+}
+
+export async function submitProblemCode(
+  problemId: string,
+  code: string,
+  language: string = 'javascript'
+): Promise<CodeSubmitResponse> {
+  return apiRequest<CodeSubmitResponse>(`/problems/${problemId}/submit`, {
+    method: 'POST',
+    body: JSON.stringify({ code, language }),
+  });
+}
+
+export async function fetchProblemHint(
+  problemId: string,
+  hintLevel: number
+): Promise<ProblemHintResponse> {
+  return apiRequest<ProblemHintResponse>(`/problems/${problemId}/hint`, {
+    method: 'POST',
+    body: JSON.stringify({ hintLevel }),
+  });
+}
+
