@@ -437,4 +437,62 @@ export class MockAIProvider implements AIProvider {
       nextHint: 'Initialize `let left = 0, right = nums.length - 1;` and loop `while (left <= right)`.',
     };
   }
+
+  async evaluateSpokenReasoning(
+    prompt: string,
+    transcript: string,
+    conceptOrProblemName: string
+  ): Promise<import('./aiProvider').SpokenReasoningReviewResult> {
+    const text = transcript.toLowerCase();
+    const conceptualGrasps: string[] = [];
+    const missingPoints: string[] = [];
+
+    // Analyze conceptual key indicators
+    if (text.includes('half') || text.includes('halv') || text.includes('divide')) {
+      conceptualGrasps.push('Clearly articulated the search space halving mechanism.');
+    }
+    if (text.includes('sorted') || text.includes('order')) {
+      conceptualGrasps.push('Explicitly identified the precondition of sorted elements.');
+    }
+    if (text.includes('o(log n)') || text.includes('log') || text.includes('logarithmic')) {
+      conceptualGrasps.push('Connected halving operations to logarithmic O(log n) time complexity.');
+    }
+    if (text.includes('pointer') || text.includes('left') || text.includes('right') || text.includes('mid')) {
+      conceptualGrasps.push('Described pointer coordination and index tracking.');
+    }
+
+    if (!text.includes('sorted')) {
+      missingPoints.push('Remember to state whether the input must be pre-sorted.');
+    }
+    if (!text.includes('edge') && !text.includes('bound') && !text.includes('empty')) {
+      missingPoints.push('Mention edge cases (e.g. target not in array, empty array, or duplicate elements).');
+    }
+
+    const accuracyScore = Math.min(1.0, 0.4 + conceptualGrasps.length * 0.2);
+    const clarityScore = text.length > 50 ? 0.9 : 0.6;
+
+    return {
+      clarityScore,
+      accuracyScore,
+      conceptualGrasps:
+        conceptualGrasps.length > 0
+          ? conceptualGrasps
+          : ['Attempted verbal articulation of algorithm mechanics.'],
+      missingPoints:
+        missingPoints.length > 0
+          ? missingPoints
+          : ['All foundational algorithmic criteria were mentioned verbally.'],
+      socraticFollowUp:
+        conceptualGrasps.length > 2
+          ? 'Great intuition! What happens if the array contains duplicate elements?'
+          : 'Can you articulate what invariant must remain true before and after each iteration?',
+      feedback:
+        accuracyScore >= 0.7
+          ? `Strong verbal walkthrough of ${conceptOrProblemName}. Your explanation demonstrates genuine algorithmic intuition rather than rote memorization.`
+          : `Good start explaining ${conceptOrProblemName}. Focus on explaining the "why": why does halving eliminate the other half of candidates?`,
+      interviewDeliveryTip:
+        'In technical interviews, state your high-level approach and Big-O trade-offs in the first 30 seconds before walking through line-by-line pointer logic.',
+    };
+  }
 }
+

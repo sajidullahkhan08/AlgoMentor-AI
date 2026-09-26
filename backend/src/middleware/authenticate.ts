@@ -47,3 +47,27 @@ export async function authenticate(
     res.status(401).json({ error: 'Authentication failed' });
   }
 }
+
+export async function optionalAuthenticate(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return next();
+  }
+  const token = authHeader.replace('Bearer ', '');
+  try {
+    const supabase = getSupabase();
+    const { data } = await supabase.auth.getUser(token);
+    if (data?.user) {
+      req.userId = data.user.id;
+      req.userEmail = data.user.email;
+    }
+  } catch {
+    // Ignore invalid token in optional mode
+  }
+  next();
+}
+

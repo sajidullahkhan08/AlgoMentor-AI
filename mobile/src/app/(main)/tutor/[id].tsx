@@ -34,6 +34,7 @@ import {
   submitTutorResponse,
   requestTutorHint,
 } from '@/lib/api';
+import { VoiceReasoningModal } from '@/components/VoiceReasoningModal';
 
 interface Interaction {
   id: string;
@@ -98,6 +99,7 @@ export default function TutorSessionScreen() {
   const [textAnswer, setTextAnswer] = useState('');
   const [confidence, setConfidence] = useState<ConfidenceLevel>('confident');
   const [activeHint, setActiveHint] = useState<{ title: string; content: string } | null>(null);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -572,6 +574,13 @@ export default function TutorSessionScreen() {
                       numberOfLines={4}
                       textAlignVertical="top"
                     />
+                    <TouchableOpacity
+                      style={styles.voicePromptButton}
+                      onPress={() => setShowVoiceModal(true)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={styles.voicePromptButtonText}>🎙️ Speak Your Verbal Reasoning</Text>
+                    </TouchableOpacity>
                   </View>
                 )}
 
@@ -678,6 +687,18 @@ export default function TutorSessionScreen() {
           )}
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <VoiceReasoningModal
+        visible={showVoiceModal}
+        onClose={() => setShowVoiceModal(false)}
+        promptText={currentInteraction?.question.questionText || 'Explain your reasoning'}
+        topicOrProblem={concept?.name || 'DSA Concept'}
+        onSubmitted={(_review, transcript) => {
+          if (transcript) {
+            setTextAnswer((prev) => (prev ? `${prev}\n\n${transcript}` : transcript));
+          }
+        }}
+      />
     </>
   );
 }
@@ -1147,5 +1168,22 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
+  },
+  voicePromptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E1B4B',
+    borderWidth: 1,
+    borderColor: '#6366F1',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginTop: 10,
+  },
+  voicePromptButtonText: {
+    color: '#A5B4FC',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

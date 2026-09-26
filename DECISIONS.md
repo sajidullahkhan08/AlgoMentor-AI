@@ -318,45 +318,51 @@ Referenced in: `SECURITY.md` §7, `AI_TUTOR_ENGINE.md`, `TECH_STACK.md`.
 
 # DEC-DEF-02 — Voice / Speech-to-Text Provider
 
-Date: 2026-09-19
+Date: 2026-09-24
 
-Status: Deferred (until Phase 7 — Voice)
+Status: **Accepted**
 
-Question:
+Decision:
 
-Which speech-to-text service to use for voice input?
+**Hybrid Free-First Voice Reasoning Architecture (Client-Side Speech API + Socratic Spoken Analysis).**
 
-Candidates:
+Reason:
 
-- Device-native STT APIs (free, privacy-friendly, variable quality)
-- Google Cloud Speech-to-Text (accurate, not free at scale)
-- OpenAI Whisper (open-source, can run locally)
-- Gemini multimodal audio input (if supported)
+- Preserves the strict **Free-First (DEC-006)** constraint — eliminates third-party metered STT API costs.
+- Architecture:
+  - **Client-Side Speech Recognition**: Uses browser Web Speech API / native mobile dictation with editable live transcription.
+  - **Editable Transcript Modal**: Enables students to preview and refine transcribed technical jargon (e.g. "deque", "$O(\log n)$", "BFS") before submission.
+  - **Socratic Spoken Reasoning Evaluation**: The backend AI provider analyzes verbal stream-of-consciousness explanations for conceptual clarity, edge-case consideration, and communication fluency.
+  - **Privacy Guarantee**: Audio streams are processed locally and discarded immediately. No raw voice recordings are stored in the database.
 
-Constraints:
-
-- Must respect the free-first constraint (DEC-006).
-- Must address privacy implications of recording student audio.
+Referenced in: `FEATURE_SPEC.md` §P2 Voice, `AI_TUTOR_ENGINE.md` §3.
 
 ---
 
 # DEC-DEF-03 — Spaced Repetition Algorithm
 
-Date: 2026-09-19
+Date: 2026-09-24
 
-Status: Deferred (until Phase 8 — Revision)
+Status: **Accepted**
 
-Question:
+Decision:
 
-Which algorithm to use for the revision/spaced-repetition system?
+**SuperMemo SM-2 Algorithm Enhanced with Confidence Calibration and 5-Box Leitner Categorization.**
 
-Candidates:
+Reason:
 
-- SM-2 (simple, well-understood)
-- FSRS (modern, more accurate)
-- Custom interval logic
-- No formal algorithm (manual review queue based on weakness detection)
+- **Proven & Predictable**: SM-2 has over three decades of empirical validation in cognitive psychology and computer-assisted learning (Anki, SuperMemo).
+- **Free-First & Lightweight (DEC-006)**: Runs deterministically in both TypeScript backend and client without requiring external machine learning inference pipelines or paid scheduling APIs.
+- **Formulation**:
+  - Rating $q \in \{0, 1, 2, 3, 4, 5\}$ (0: Blackout, 2: Hard, 3: Good, 5: Perfect).
+  - If $q < 3$ (Failed Retrieval):
+    - `repetitions = 0`
+    - `interval_days = 1`
+    - If overconfident, penalty reset to Leitner Box 1 immediately.
+  - If $q \ge 3$ (Successful Retrieval):
+    - $I(0) = 1$, $I(1) = 6$, $I(n) = \text{round}(I(n-1) \times \text{EF})$.
+    - $\text{EF}' = \max(1.3, \text{EF} + (0.1 - (5 - q) \times (0.08 + (5 - q) \times 0.02)))$.
+    - `leitner_box` $\in [1, 5]$ computed as $\min(5, \lfloor \text{repetitions} / 2 \rfloor + 1)$.
+- **Calibration Integration**: Misconceptions and overconfidence triggers a steeper EF penalty, while high-confidence verified answers accelerate interval progression.
 
-Note:
-
-The `DATABASE_SPEC.md` Revision Items table intentionally omits `interval` and `difficulty` fields until this decision is made.
+Referenced in: `FEATURE_SPEC.md` §P2 Revision, `DATABASE_SPEC.md` Revision Items, `KNOWLEDGE_MODEL.md`.

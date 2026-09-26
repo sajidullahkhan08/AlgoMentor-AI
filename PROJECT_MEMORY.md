@@ -54,32 +54,50 @@ Students should be able to respond through:
 
 Status:
 
-**Phase 5 — Problem Solving & DSA Patterns (Complete)**
+**Phase 10 — Final Polish, Full Suite Verification & Production Readiness (COMPLETE)**
 
 ### What exists
 
 - `backend/` — Express 5 + TypeScript backend with Supabase integration
-  - Auth middleware (JWT validation)
-  - Routes: health, courses, concepts, profiles, tutor, and problems
-  - Database migrations: 001_initial_schema, 002_adaptive_tutoring, 003_problems_and_patterns
+  - Auth middleware (JWT validation and optional auth fallback)
+  - Routes: health, courses, concepts, profiles, tutor, problems, revision, and system-design
+  - Database migrations: 001_foundation, 002_seed_data, 003_problems_and_patterns, 004_revision_system, 005_system_design
   - AI Provider Layer: `AIProvider` interface with `GeminiProvider` (`gemini-3.6-flash` via @google/genai) and `MockAIProvider` fallback
   - `CodeRunnerService`: Isolated Node.js `vm` sandbox without process/fs/network access, 1,000ms execution timeout per test case, regex user function extraction
-  - `ProblemsService`: Curated LeetCode problems (e.g. Binary Search, Search 2D Matrix, Find Minimum in Rotated Sorted Array) and DSA patterns (Binary Search, Search Space Reduction, Two Pointers)
-  - Socratic AI Code Reviewer: Evaluates optimality, time & space complexity ($O(\log n)$ vs $O(n)$ linear scan penalty), edge cases, and algorithmic invariant reflection questions
-  - Automated test suites: `test_adaptive_tutoring.ts` (21 assertions) and `test_problem_solving.ts` (18 assertions) — all 39 assertions passing via `npm test`
+  - `ProblemsService`: Curated LeetCode problems and DSA patterns
+  - `RevisionService`: SuperMemo SM-2 algorithm with calibration confidence and 5-box Leitner categorization
+  - `SystemDesignService`: Production scale scenarios, back-of-the-envelope calculations, and Socratic architectural evaluation
+  - Socratic AI Code Reviewer & Verbal Reasoning Evaluator
+  - Automated test suites: 117 assertions passing across all suites (`npm test`):
+    - `test_adaptive_tutoring.ts` (21 assertions)
+    - `test_problem_solving.ts` (18 assertions)
+    - `test_interactive_visualizers.ts` (17 assertions)
+    - `test_voice_reasoning.ts` (15 assertions)
+    - `test_spaced_repetition.ts` (25 assertions)
+    - `test_system_design.ts` (21 assertions)
 - `mobile/` — React Native + Expo SDK 57
   - Supabase Auth (client-side, per DEC-PEN-02)
   - Auth screens (login, register)
   - Curriculum browsing (dashboard → course → topic → concept)
-  - Interactive Socratic AI Tutor Session screen (`/(main)/tutor/[id]`) with MCQ, multi-select, step ordering, prerequisite descent/ascent, and confidence calibration
+  - Interactive Socratic AI Tutor Session screen (`/(main)/tutor/[id]`) with MCQ, multi-select, step ordering, prerequisite descent/ascent, confidence calibration, and verbal reasoning modal
   - **VisualArrayTrace**: Step-by-step interactive array invariant tracer showing Left/Mid/Right pointers, search space elimination, and condition explanations
-  - **DSA Problem & Pattern Catalog (`/(main)/problems/index`)**: Search, difficulty filtering (Easy/Medium/Hard), pattern chips, and deep-dive Pattern Explorer tab (recognition signals, key invariants, optimal complexities)
-  - **Problem Workspace (`/(main)/problems/[id]`)**: Multi-tab environment featuring Problem Statement with embedded `VisualArrayTrace`, Monospace Code Editor, Test Results runner, Socratic AI Review panel, and 5-level Graduated Hint Ladder
-  - Dashboard banner card directly launching Problem Solving
+  - **DSA Problem & Pattern Catalog (`/(main)/problems/index`)**: Search, difficulty filtering, pattern chips, and deep-dive Pattern Explorer tab
+  - **Problem Workspace (`/(main)/problems/[id]`)**: Multi-tab environment featuring Problem Statement with embedded `VisualArrayTrace`, Code Editor, Test Results runner, Socratic AI Review panel, 5-level Graduated Hint Ladder, and Verbal Reasoning Studio trigger
+  - **Interactive Mental Model Components**:
+    - `VisualTreeTraversal.tsx`: Interactive Binary Tree traversal (Pre-order, In-order, Post-order, Level-order BFS) with call stack and queue visualization
+    - `VisualGraphTraversal.tsx`: Interactive Graph traversal (BFS Queue vs DFS Stack) with visited set tracking and cycle avoidance
+    - `VisualTwoPointerSlidingWindow.tsx`: Two-pointer collision on sorted arrays and sliding window sum updates in $O(1)$ time
+    - `VisualDPMatrix.tsx`: Dynamic Programming 2D table explorer for Grid Unique Paths and 0/1 Knapsack with dependency cell indicators
+    - `VisualComplexityComparator.tsx`: Real-time Big-O growth simulator with $N$ selector ($N = 10$ to $10,000$), step counts, and 1 GHz CPU execution time estimates
+  - **Mental Models Gallery & Playground (`/(main)/visualizers/index` & `[type]`)**
+  - **Verbal Reasoning Studio (`/(main)/voice/index`)**: Native Web Speech API / dictation integration with editable live transcription and Socratic interview delivery review
+  - **Revision & Spaced Repetition (`/(main)/revision/index` & `practice`)**: Visual 5-box Leitner distribution, daily retrieval streak, and active recall flashcards
+  - **System Design Studio (`/(main)/system-design/index` & `[id]`)**: Production architecture scenarios with back-of-the-envelope scale estimation, component builder, and Socratic trade-off analysis
+  - Dashboard launcher cards connecting all modules
 
 ### What is next
 
-- Phase 6: Interactive Visualizations & Mental Models (interactive tree traversals, graph BFS/DFS visualizers with stack/queue state, DP state matrices)
+- All FYP deliverable phases (0 through 10) are complete and verified. Ready for user demonstration, academic evaluation, and production deployment.
 
 ---
 
@@ -288,39 +306,28 @@ Whenever implementation reveals something important that future developers would
 
 ### Last completed task
 
-Phase 3: First AI Tutor Vertical Slice:
-- AI provider layer (`AIProvider`, `GeminiProvider`, `MockAIProvider`, factory)
-- Tutor Engine service (`tutorEngine.ts`) with knowledge state transitions
-- Tutor API routes (`/api/tutor/session`, `/respond`, `/hint`)
-- Mobile Socratic learning screen (`/tutor/[id]`) with MCQ, text reasoning, hint ladder, and confidence indicator
-- Wired "Start Learning" button on Concept Detail screen
+Phase 7 (Voice & Verbal Reasoning), Phase 8 (Revision & Spaced Repetition), Phase 9 (System Design), and Phase 10 (Final Polish & Verification):
+- AI verbal evaluation engine & Web Speech API reasoning modal (`VoiceReasoningModal.tsx`, `voice/index.tsx`)
+- SuperMemo SM-2 spaced repetition service with 5-box Leitner categorization and active retrieval flashcards (`revision/index.tsx`, `revision/practice.tsx`)
+- System Design curriculum with back-of-the-envelope scale estimation, component builder, and Socratic trade-off consultant (`system-design/index.tsx`, `system-design/[id].tsx`)
+- 117 automated unit and integration tests passing with 100% pass rate
+- Clean TypeScript compilation across backend and mobile (`npx tsc --noEmit`)
 
 ### Current task
 
-First Vertical Slice is complete and verified end-to-end.
+All architectural phases of AlgoMentor AI are complete, integrated, and verified.
 
 ### Immediate next step
 
-Engage in user testing of the Socratic tutor loop on mobile/web. Then proceed to Phase 4: Adaptive Tutoring Expansion (automated prerequisite descent).
+End-to-end user testing on device / browser, followed by final graduation/FYP deliverable review.
 
 ### Current blocker
 
 None.
 
-### Files recently modified
+### Important implementation details
 
-- `backend/src/services/ai/aiProvider.ts` (NEW)
-- `backend/src/services/ai/geminiProvider.ts` (NEW)
-- `backend/src/services/ai/mockProvider.ts` (NEW)
-- `backend/src/services/ai/index.ts` (NEW)
-- `backend/src/services/tutorEngine.ts` (NEW)
-- `backend/src/routes/tutor.ts` (NEW)
-- `backend/src/index.ts` (MODIFY)
-- `mobile/src/lib/api.ts` (MODIFY)
-- `mobile/src/app/(main)/concept/[id].tsx` (MODIFY)
-- `mobile/src/app/(main)/tutor/[id].tsx` (NEW)
-- `TASKS.md`, `DECISIONS.md`, `CHANGELOG.md`, `PROJECT_MEMORY.md`
-
-### Important implementation detail
-
-If `GEMINI_API_KEY` is provided in `backend/.env`, the system automatically uses Gemini 2.5 Flash with structured JSON schemas. If no key is set, it falls back to `MockAIProvider` with curated Binary Search Socratic dialogue and full 7-level hint ladder.
+- **Free-First AI Engine (DEC-006):** When `GEMINI_API_KEY` is present in `backend/.env`, the system leverages `gemini-3.6-flash` with structured JSON output. If network issues or rate limits occur, it seamlessly falls back to the deterministic `MockAIProvider` without breaking student sessions.
+- **Node.js Sandbox (DEC-DEF-01):** Code is safely executed in an isolated VM context with wall-clock timeout protection.
+- **Client-Side Speech API (DEC-DEF-02):** Speech recognition is done client-side with an editable live transcript, avoiding metered API costs.
+- **SM-2 Spaced Repetition (DEC-DEF-03):** Calculates interval progression based on recall accuracy and confidence calibration.

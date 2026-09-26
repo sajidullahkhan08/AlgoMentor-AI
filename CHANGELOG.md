@@ -29,6 +29,97 @@ All meaningful project changes should be recorded here.
 ```
 
 
+# 2026-09-24 — Phase 10: Final Polish, Verification & Full Suite Audit
+
+### Added
+
+- **Full Verification Suite**: 117 automated test assertions across all phases with 100% pass rate.
+- **Zero-Error TypeScript Compilation**: Both `backend/` and `mobile/` compile cleanly with `npx tsc --noEmit`.
+- **Integrated Navigation**: Stack navigation and Dashboard launch cards connecting Socratic Tutoring, Problems & Patterns, Mental Models, Verbal Reasoning, Spaced Repetition, and System Design.
+
+---
+
+# 2026-09-24 — Phase 9: System Design Learning Track
+
+### Added
+
+- **Curriculum & Scenarios Migration** (`backend/supabase/migrations/005_system_design.sql`):
+  - Seeded production scenarios: Distributed URL Shortener (TinyURL), Real-Time Chat & Presence System (Slack/WhatsApp), and Distributed API Rate Limiter (Cloudflare/Stripe).
+  - Structured data fields for scale metrics (DAU, QPS, storage), functional requirements, non-functional latency budgets, architecture components, and trade-off questions.
+- **System Design Service & Routes** (`backend/src/services/systemDesignService.ts`, `backend/src/routes/systemDesign.ts`):
+  - `GET /api/system-design/scenarios`: Full catalog listing.
+  - `GET /api/system-design/scenarios/:id`: Scenario detail retrieval.
+  - `POST /api/system-design/evaluate`: Socratic architectural critique evaluating component completeness, bottlenecks, Single Points of Failure (SPOFs), and failure mode challenges.
+- **Mobile Architecture Studio**:
+  - `mobile/src/app/(main)/system-design/index.tsx`: Catalog with scale metrics pills, category tags, and difficulty badges.
+  - `mobile/src/app/(main)/system-design/[id].tsx`: 3-tab interactive studio:
+    - Tab 1: Back-of-the-envelope scale calculations and requirements.
+    - Tab 2: Architectural component checklist, data flow rationale input, and Socratic evaluation review.
+    - Tab 3: Interactive engineering trade-off cards with revealed architectural analyses.
+- **Automated Verification**:
+  - `backend/src/test_system_design.ts`: 21 automated assertions testing catalog retrieval, sound vs flawed architecture grading, SPOF detection, and HTTP routes.
+
+---
+
+# 2026-09-24 — Phase 8: Revision & Spaced Repetition
+
+### Added
+
+- **Architectural Decision Resolved**:
+  - Accepted `DEC-DEF-03`: SuperMemo SM-2 Algorithm enhanced with Confidence Calibration & 5-Box Leitner Categorization.
+- **Database Schema Migration** (`backend/supabase/migrations/004_revision_system.sql`):
+  - `revision_items` and `revision_logs` tables tracking repetition counts, intervals, easiness factors, and Leitner boxes.
+  - Seeded algorithmic invariants for Binary Search, Two Pointers, Sliding Window, and BFS shortest path.
+- **Spaced Repetition Service & Routes** (`backend/src/services/revisionService.ts`, `backend/src/routes/revision.ts`):
+  - Deterministic SM-2 calculation with calibration penalties (steeper EF drop for overconfident mistakes).
+  - In-memory fallback guaranteeing 100% reliability in offline / test mode.
+  - `GET /api/revision/queue`, `POST /api/revision/review`, `GET /api/revision/stats`.
+- **Mobile Revision Screens**:
+  - `mobile/src/app/(main)/revision/index.tsx`: Visual distribution across Leitner Boxes 1-5, retention percentage, and streak counter.
+  - `mobile/src/app/(main)/revision/practice.tsx`: Active retrieval flashcards (question -> mental scratchpad -> reveal invariant -> SM-2 self-rating).
+- **Automated Verification**:
+  - `backend/src/test_spaced_repetition.ts`: 25 automated assertions testing SM-2 interval expansion, reset penalties, queue retrieval, and review logging.
+
+---
+
+# 2026-09-24 — Phase 7: Voice & Speech-to-Text Reasoning
+
+### Added
+
+- **Architectural Decision Resolved**:
+  - Accepted `DEC-DEF-02`: Hybrid Free-First Voice Reasoning Architecture (Web Speech API / native dictation + Socratic spoken analysis).
+- **AI Verbal Reasoning Layer** (`aiProvider.ts`, `mockProvider.ts`, `geminiProvider.ts`):
+  - `evaluateSpokenReasoning`: Evaluates spoken transcripts for clarity, conceptual accuracy, missing edge cases, and technical interview delivery tips.
+  - Route `POST /api/tutor/voice/evaluate`.
+- **Mobile Voice Components & Screens**:
+  - `mobile/src/components/VoiceReasoningModal.tsx`: Real-time microphone listening, editable transcript, and evaluation feedback.
+  - `mobile/src/app/(main)/voice/index.tsx`: Verbal Reasoning Studio with interview prompts (Binary Search, BFS, Two Pointers, DP).
+  - Integrated voice reasoning triggers into Socratic Tutoring (`tutor/[id].tsx`) and Problem Workspace (`problems/[id].tsx`).
+- **Automated Verification**:
+  - `backend/src/test_voice_reasoning.ts`: 15 automated assertions testing high-quality vs weak transcripts, provider fallback, and HTTP endpoint.
+
+---
+
+# 2026-09-24 — Phase 6: Interactive Visualizations & Mental Models
+
+### Added
+
+- **Interactive Mental Model Components** (`mobile/src/components/`):
+  - `VisualTreeTraversal.tsx`: Interactive Binary Tree visualizer demonstrating Pre-order, In-order, Post-order, and Level-order (BFS) traversals with simulated recursion call stack and FIFO queue.
+  - `VisualGraphTraversal.tsx`: Interactive Graph traversal visualizer demonstrating Breadth-First Search (via Queue) and Depth-First Search (via Stack) with visited set tracking and cycle avoidance.
+  - `VisualTwoPointerSlidingWindow.tsx`: Interactive dual-mode component for Two-Pointer collision (Two Sum II) and Sliding Window (Size K = 3) showing $O(1)$ window transitions.
+  - `VisualDPMatrix.tsx`: Interactive 2D Dynamic Programming table explorer supporting Grid Unique Paths ($3 \times 4$) and 0/1 Knapsack with visual dependency cell indicators.
+  - `VisualComplexityComparator.tsx`: Big-O Growth Rate Simulator with dynamic input size $N$ presets ($10$ to $10,000$), operational step counts, and estimated CPU execution times.
+- **Mental Models Gallery & Playground**:
+  - `mobile/src/app/(main)/visualizers/index.tsx`: Visualizer Gallery hub screen with cards, complexity badges, and key concepts.
+  - `mobile/src/app/(main)/visualizers/[type].tsx`: Full-screen playground with invariant explanations and technical interview takeaways.
+  - Connected visualizer launcher banners into Concept Details (`mobile/src/app/(main)/concept/[id].tsx`) and Dashboard (`mobile/src/app/(main)/dashboard.tsx`).
+- **Automated Verification**:
+  - `backend/src/test_interactive_visualizers.ts`: 17 automated assertions verifying tree traversal sequences, graph BFS/DFS reachability and frontier order, two-pointer invariants, DP recurrence calculations, and Big-O asymptotic scaling.
+  - Combined `npm test` running 56 / 56 passing test assertions across all phases.
+
+---
+
 # 2026-09-22 — Phase 5: Problem Solving & DSA Patterns
 
 ### Added

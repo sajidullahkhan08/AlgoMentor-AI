@@ -163,17 +163,11 @@ A graph database should only be introduced if the actual requirements justify it
 
 ---
 
-# 10. Future Extension
+# 10. Spaced Repetition & Retention (Implemented)
 
-Possible future student-model improvements:
+Implemented in Phase 8 (resolving DEC-DEF-03):
 
-- Bayesian knowledge tracing
-- Item response theory
-- Skill embeddings
-- Mastery prediction
-- Forgetting models
-- Spaced repetition algorithms
-
-Do not implement these merely because they sound sophisticated.
-
-Implement them only when justified by the project scope.
+- **SuperMemo SM-2 Algorithm**: Dynamically computes intervals and Ease Factor ($EF \ge 1.3$) based on active retrieval performance rating $q \in [0, 5]$.
+- **5-Box Leitner Categorization**: Items progress from Box 1 (daily review) to Box 5 (long-term mastery).
+- **Confidence Calibration Penalty**: Overconfident errors (high confidence + failed recall) trigger an immediate reset to Box 1 and Ease Factor reduction, while underconfident accurate answers accelerate interval growth.
+- **Persistent Logs**: Every review is recorded in `revision_logs` to enable historical retention analytics.

@@ -109,6 +109,102 @@ export default function DashboardScreen() {
           </View>
         </TouchableOpacity>
 
+        {/* Mental Models & Interactive Visualizers Banner */}
+        <TouchableOpacity
+          style={styles.visualizerBannerCard}
+          onPress={() => router.push('/(main)/visualizers/index' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.problemBannerHeader}>
+            <View style={[styles.problemIconBadge, { backgroundColor: '#064e3b' }]}>
+              <Text style={styles.problemIcon}>🌲</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.problemBannerTitle}>Mental Models & Visualizers</Text>
+              <Text style={styles.problemBannerSubtitle}>
+                Interactive diagrams for Trees, Graphs, Two-Pointers, DP Matrices & Big-O
+              </Text>
+            </View>
+          </View>
+          <View style={styles.problemBannerFooter}>
+            <Text style={[styles.problemBannerAction, { color: '#34d399' }]}>
+              Explore Interactive Visualizers →
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Verbal Reasoning Studio Banner */}
+        <TouchableOpacity
+          style={styles.voiceBannerCard}
+          onPress={() => router.push('/(main)/voice' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.problemBannerHeader}>
+            <View style={[styles.problemIconBadge, { backgroundColor: '#312e81' }]}>
+              <Text style={styles.problemIcon}>🎙️</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.problemBannerTitle}>Verbal Reasoning Studio</Text>
+              <Text style={styles.problemBannerSubtitle}>
+                Practice speaking your algorithmic thought process with instant Socratic feedback
+              </Text>
+            </View>
+          </View>
+          <View style={styles.problemBannerFooter}>
+            <Text style={[styles.problemBannerAction, { color: '#a78bfa' }]}>
+              Practice Interview Delivery →
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Spaced Revision & Retrieval Practice Banner */}
+        <TouchableOpacity
+          style={styles.revisionBannerCard}
+          onPress={() => router.push('/(main)/revision' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.problemBannerHeader}>
+            <View style={[styles.problemIconBadge, { backgroundColor: '#4c0519' }]}>
+              <Text style={styles.problemIcon}>🔁</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.problemBannerTitle}>Revision & Spaced Repetition</Text>
+              <Text style={styles.problemBannerSubtitle}>
+                SM-2 algorithm & 5-box Leitner system for long-term invariant retention
+              </Text>
+            </View>
+          </View>
+          <View style={styles.problemBannerFooter}>
+            <Text style={[styles.problemBannerAction, { color: '#fb7185' }]}>
+              Review Daily Retrieval Queue →
+            </Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* System Design Studio Banner */}
+        <TouchableOpacity
+          style={styles.systemDesignBannerCard}
+          onPress={() => router.push('/(main)/system-design' as any)}
+          activeOpacity={0.8}
+        >
+          <View style={styles.problemBannerHeader}>
+            <View style={[styles.problemIconBadge, { backgroundColor: '#0c4a6e' }]}>
+              <Text style={styles.problemIcon}>🏛️</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.problemBannerTitle}>System Design Studio</Text>
+              <Text style={styles.problemBannerSubtitle}>
+                Distributed architectures, back-of-the-envelope scale, and Socratic trade-off evaluations
+              </Text>
+            </View>
+          </View>
+          <View style={styles.problemBannerFooter}>
+            <Text style={[styles.problemBannerAction, { color: '#38bdf8' }]}>
+              Explore Production Scenarios →
+            </Text>
+          </View>
+        </TouchableOpacity>
+
         {/* Courses section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Your Courses</Text>
@@ -324,9 +420,41 @@ const styles = StyleSheet.create({
     backgroundColor: '#131b2e',
     borderRadius: 16,
     padding: 18,
-    marginBottom: 24,
+    marginBottom: 12,
     borderWidth: 1.5,
     borderColor: '#1d4ed8',
+  },
+  visualizerBannerCard: {
+    backgroundColor: '#06281e',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#059669',
+  },
+  voiceBannerCard: {
+    backgroundColor: '#1e1b4b',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#6366f1',
+  },
+  revisionBannerCard: {
+    backgroundColor: '#2e0b16',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    borderColor: '#f43f5e',
+  },
+  systemDesignBannerCard: {
+    backgroundColor: '#032030',
+    borderRadius: 16,
+    padding: 18,
+    marginBottom: 24,
+    borderWidth: 1.5,
+    borderColor: '#0284c7',
   },
   problemBannerHeader: {
     flexDirection: 'row',

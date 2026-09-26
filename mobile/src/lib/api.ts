@@ -350,3 +350,155 @@ export async function fetchProblemHint(
   });
 }
 
+// ---------------------------------------------------------------------------
+// Phase 7: Voice & Spoken Reasoning API
+// ---------------------------------------------------------------------------
+
+export interface SpokenReasoningReview {
+  clarityScore: number;
+  accuracyScore: number;
+  conceptualGrasps: string[];
+  missingPoints: string[];
+  socraticFollowUp: string;
+  feedback: string;
+  interviewDeliveryTip: string;
+}
+
+export async function evaluateVoiceReasoning(
+  prompt: string,
+  transcript: string,
+  topicOrProblem: string
+): Promise<SpokenReasoningReview> {
+  return apiRequest<SpokenReasoningReview>('/tutor/voice/evaluate', {
+    method: 'POST',
+    body: JSON.stringify({ prompt, transcript, topicOrProblem }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Phase 8: Revision & Spaced Repetition API
+// ---------------------------------------------------------------------------
+
+export interface RevisionItem {
+  id: string;
+  item_type: 'concept' | 'problem' | 'invariant';
+  title: string;
+  prompt_question: string;
+  solution_explanation: string;
+  key_invariant: string;
+  repetition_count: number;
+  interval_days: number;
+  easiness_factor: number;
+  leitner_box: number;
+  next_review_date: string;
+  last_reviewed_at?: string | null;
+  weakness_flags: string[];
+}
+
+export interface RevisionStats {
+  totalItems: number;
+  dueTodayCount: number;
+  masteredCount: number;
+  boxDistribution: { [box: number]: number };
+  retentionRatePercent: number;
+  currentStreakDays: number;
+}
+
+export interface RevisionReviewResult {
+  item: RevisionItem;
+  previousBox: number;
+  newBox: number;
+  intervalDays: number;
+  nextReviewDate: string;
+  earnedMastery: boolean;
+  message: string;
+}
+
+export async function fetchRevisionQueue(): Promise<{
+  dueItems: RevisionItem[];
+  upcomingItems: RevisionItem[];
+}> {
+  return apiRequest<{ dueItems: RevisionItem[]; upcomingItems: RevisionItem[] }>('/revision/queue');
+}
+
+export async function submitRevisionReview(
+  itemId: string,
+  rating: number,
+  confidence?: string,
+  timeSpentSeconds?: number
+): Promise<RevisionReviewResult> {
+  return apiRequest<RevisionReviewResult>('/revision/review', {
+    method: 'POST',
+    body: JSON.stringify({ itemId, rating, confidence, timeSpentSeconds }),
+  });
+}
+
+export async function fetchRevisionStats(): Promise<RevisionStats> {
+  return apiRequest<RevisionStats>('/revision/stats');
+}
+
+// ---------------------------------------------------------------------------
+// Phase 9: System Design API
+// ---------------------------------------------------------------------------
+
+export interface ArchitectureComponent {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface TradeOffQuestion {
+  id: string;
+  question: string;
+  trade_off: string;
+}
+
+export interface SystemDesignScenario {
+  id: string;
+  slug: string;
+  title: string;
+  description: string;
+  difficulty: 'beginner' | 'intermediate' | 'advanced';
+  category: string;
+  scale_metrics: { [key: string]: string };
+  functional_requirements: string[];
+  non_functional_requirements: string[];
+  architecture_components: ArchitectureComponent[];
+  trade_off_questions: TradeOffQuestion[];
+}
+
+export interface SystemDesignEvaluation {
+  score: number;
+  isArchitecturallySound: boolean;
+  strengths: string[];
+  bottlenecksIdentified: string[];
+  singlePointsOfFailure: string[];
+  socraticChallenge: string;
+  feedback: string;
+  scalabilityVerdict: string;
+}
+
+export async function fetchSystemDesignScenarios(): Promise<SystemDesignScenario[]> {
+  return apiRequest<SystemDesignScenario[]>('/system-design/scenarios');
+}
+
+export async function fetchSystemDesignScenario(
+  idOrSlug: string
+): Promise<SystemDesignScenario> {
+  return apiRequest<SystemDesignScenario>(`/system-design/scenarios/${idOrSlug}`);
+}
+
+export async function submitSystemDesignEvaluation(
+  scenarioId: string,
+  selectedComponentIds: string[],
+  userExplanation: string
+): Promise<SystemDesignEvaluation> {
+  return apiRequest<SystemDesignEvaluation>('/system-design/evaluate', {
+    method: 'POST',
+    body: JSON.stringify({ scenarioId, selectedComponentIds, userExplanation }),
+  });
+}
+
+
+
+

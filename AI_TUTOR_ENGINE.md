@@ -240,20 +240,17 @@ Use:
 
 ```text
 AIProvider
-├── generateTutorResponse()
-├── evaluateResponse()
 ├── generateQuestion()
+├── evaluateResponse()
 ├── generateHint()
-└── analyzeReasoning()
+├── evaluateSpokenReasoning()
+└── reviewCode()
 ```
 
-Providers can include:
-
-- Gemini
-- Other API provider
-- Local/open model
-
-The exact interface may evolve.
+Implemented in `backend/src/services/ai/`:
+- `GeminiProvider`: Live multimodal/text provider utilizing `@google/genai` with model `gemini-3.6-flash`.
+- `MockAIProvider`: Deterministic offline provider ensuring 0% downtime and instant test execution.
+- `AIProviderFactory`: Resilient fallback factory.
 
 ---
 

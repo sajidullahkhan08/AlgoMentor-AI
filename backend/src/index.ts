@@ -17,7 +17,9 @@ import { profileRoutes } from './routes/profiles';
 import { healthRoutes } from './routes/health';
 import tutorRoutes from './routes/tutor';
 import problemRoutes from './routes/problems';
-import { authenticate } from './middleware/authenticate';
+import revisionRoutes from './routes/revision';
+import systemDesignRoutes from './routes/systemDesign';
+import { authenticate, optionalAuthenticate } from './middleware/authenticate';
 
 const app = express();
 
@@ -30,8 +32,10 @@ app.use('/api', healthRoutes);
 app.use('/api/courses', courseRoutes);
 app.use('/api/concepts', conceptRoutes);
 app.use('/api/profiles', profileRoutes);
-app.use('/api/tutor', authenticate, tutorRoutes);
+app.use('/api/tutor', optionalAuthenticate, tutorRoutes);
 app.use('/api/problems', problemRoutes);
+app.use('/api/revision', optionalAuthenticate, revisionRoutes);
+app.use('/api/system-design', systemDesignRoutes);
 
 // --- Error handling (must be last) ---
 app.use(errorHandler);

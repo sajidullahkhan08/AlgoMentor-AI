@@ -85,6 +85,16 @@ export interface CodeReviewResult {
   nextHint: string;
 }
 
+export interface SpokenReasoningReviewResult {
+  clarityScore: number; // 0.0 to 1.0
+  accuracyScore: number; // 0.0 to 1.0
+  conceptualGrasps: string[];
+  missingPoints: string[];
+  socraticFollowUp: string;
+  feedback: string;
+  interviewDeliveryTip: string;
+}
+
 export interface AIProvider {
   /**
    * Generate the next Socratic question or task for a concept.
@@ -118,5 +128,15 @@ export interface AIProvider {
     language: string,
     testSummary: { passed: number; total: number; failedTests: any[] }
   ): Promise<CodeReviewResult>;
+
+  /**
+   * Socratic evaluation of spoken verbal reasoning and thought process.
+   */
+  evaluateSpokenReasoning(
+    prompt: string,
+    transcript: string,
+    conceptOrProblemName: string
+  ): Promise<SpokenReasoningReviewResult>;
 }
+
 

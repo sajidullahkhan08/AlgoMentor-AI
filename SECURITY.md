@@ -65,9 +65,13 @@ Validate:
 
 # 7. Code Execution
 
-If the application eventually executes student code remotely, use an isolated/sandboxed execution environment.
+Implemented in Phase 5 via `CodeRunner` (`backend/src/services/codeRunner.ts`, resolving DEC-DEF-01):
 
-Never execute arbitrary student code directly inside the main application server.
+- Executes code in an isolated Node.js `vm.createContext` environment.
+- The global execution context is sanitized: `process`, `require`, `fs`, `fetch`, `XMLHttpRequest`, `WebSocket`, `ChildProcess`, and `Buffer` are stripped or denied.
+- Enforces a strict 1,000ms wall-clock timeout per test execution to prevent infinite loops, hangs, or resource starvation.
+- Memory ceiling and input/output deep JSON comparisons are enforced safely.
+- Never runs untrusted code in the primary uncontained Express process context.
 
 ---
 

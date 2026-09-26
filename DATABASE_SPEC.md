@@ -175,38 +175,81 @@ See `KNOWLEDGE_MODEL.md` §7 for pattern competency details.
 
 ---
 
-# 16. Problem Attempts
+---
 
-Potential fields:
+# 16. Problem Attempts & Submissions
 
-- user_id
-- problem_id
-- status
-- hints_used
-- attempts
-- solved_independently
-- created_at
+Implemented in migration `003_problems_and_patterns.sql`:
+
+`user_problem_submissions`:
+- `id` (UUID, PK)
+- `user_id` (UUID, FK to `profiles.id`)
+- `problem_id` (UUID, FK to `problems.id`)
+- `code` (TEXT)
+- `status` (`passed` | `failed` | `syntax_error` | `timeout`)
+- `tests_passed` (INT)
+- `total_tests` (INT)
+- `runtime_ms` (INT)
+- `ai_review` (JSONB)
+- `hints_used` (INT)
+- `created_at` (TIMESTAMPTZ)
 
 ---
 
-# 17. Revision Items
+# 17. Revision Items & Logs (SuperMemo SM-2)
 
-Potential fields:
+Implemented in migration `004_revision_system.sql` (resolving DEC-DEF-03):
 
-- user_id
-- concept_id
-- due_at
-- last_result
+`revision_items`:
+- `id` (UUID, PK)
+- `user_id` (UUID, FK to `profiles.id`)
+- `concept_id` (UUID, FK to `concepts.id`)
+- `prompt_question` (TEXT)
+- `expected_answer` (TEXT)
+- `repetition_count` (INT, default 0)
+- `interval_days` (NUMERIC, default 1.0)
+- `ease_factor` (NUMERIC, default 2.5)
+- `leitner_box` (INT, range [1, 5], default 1)
+- `last_reviewed_at` (TIMESTAMPTZ)
+- `next_review_due` (TIMESTAMPTZ)
+- `last_rating` (INT, range [0, 5])
+- `created_at` (TIMESTAMPTZ)
 
-The `interval` and `difficulty` fields are intentionally omitted until a spaced-repetition algorithm is selected. See `DECISIONS.md` DEC-DEF-03.
+`revision_logs`:
+- `id` (UUID, PK)
+- `revision_item_id` (UUID, FK to `revision_items.id`)
+- `user_id` (UUID, FK to `profiles.id`)
+- `rating` (INT, range [0, 5])
+- `student_answer` (TEXT)
+- `interval_before` (NUMERIC)
+- `interval_after` (NUMERIC)
+- `ease_factor_before` (NUMERIC)
+- `ease_factor_after` (NUMERIC)
+- `reviewed_at` (TIMESTAMPTZ)
 
 ---
 
-# 18. AI Conversations
+# 18. System Design Learning Track
 
-Only store information necessary for product functionality and debugging.
+Implemented in migration `005_system_design.sql`:
 
-Do not store unnecessary sensitive information.
+`system_design_scenarios`:
+- `id` (TEXT, PK, e.g. `url-shortener`, `chat-system`, `rate-limiter`)
+- `title` (TEXT)
+- `difficulty` (`Beginner` | `Intermediate` | `Advanced`)
+- `scale_metrics` (JSONB: DAU, write_qps, read_qps, storage_per_year, latency_target)
+- `requirements` (JSONB: functional, non_functional)
+- `calculations` (JSONB: storage, throughput, bandwidth)
+- `created_at` (TIMESTAMPTZ)
+
+`system_design_evaluations`:
+- `id` (UUID, PK)
+- `scenario_id` (TEXT, FK to `system_design_scenarios.id`)
+- `user_id` (UUID, FK to `profiles.id`)
+- `components` (JSONB: array of architectural blocks)
+- `connections` (JSONB: directed graph edges between components)
+- `evaluation` (JSONB: score, feedback, bottlenecks, trade_offs, socratic_prompt)
+- `created_at` (TIMESTAMPTZ)
 
 ---
 
@@ -214,4 +257,4 @@ Do not store unnecessary sensitive information.
 
 Do not add database fields merely because they might be useful someday.
 
-Add fields when an actual feature requires them.
+All fields documented here are backed by active migrations in `backend/supabase/migrations/` and verified with automated test suites.

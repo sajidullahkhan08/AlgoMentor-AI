@@ -44,7 +44,11 @@ router.post('/session', async (req: AuthenticatedRequest, res: Response): Promis
       return;
     }
 
-    const userId = req.userId!;
+    const userId = req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
     const result = await tutorEngine.startOrResumeSession(userId, parsed.data.conceptId);
     res.json(result);
   } catch (err: any) {
@@ -59,7 +63,11 @@ router.post('/session', async (req: AuthenticatedRequest, res: Response): Promis
  */
 router.get('/session/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.userId!;
+    const userId = req.userId;
+    if (!userId) {
+      res.status(401).json({ error: 'Authentication required' });
+      return;
+    }
     const sessionId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
     const result = await tutorEngine.getSessionDetails(userId, sessionId);
     res.json(result);
@@ -83,7 +91,11 @@ router.post(
         return;
       }
 
-      const userId = req.userId!;
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
       const sessionId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
       const { interactionId, answer, confidence } = parsed.data;
 
@@ -114,7 +126,11 @@ router.post(
         return;
       }
 
-      const userId = req.userId!;
+      const userId = req.userId;
+      if (!userId) {
+        res.status(401).json({ error: 'Authentication required' });
+        return;
+      }
       const sessionId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
       const { interactionId } = parsed.data;
 
@@ -123,6 +139,39 @@ router.post(
     } catch (err: any) {
       console.error('[TutorRoute] Error generating hint:', err);
       res.status(500).json({ error: err.message || 'Failed to generate hint' });
+    }
+  }
+);
+
+import { getAIProvider } from '../services/ai';
+
+const evaluateVoiceSchema = z.object({
+  prompt: z.string().min(1, 'Prompt is required'),
+  transcript: z.string().min(1, 'Transcript is required'),
+  topicOrProblem: z.string().min(1, 'Topic or problem name is required'),
+});
+
+/**
+ * POST /api/tutor/voice/evaluate
+ * Evaluate student's spoken/conversational reasoning.
+ */
+router.post(
+  '/voice/evaluate',
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const parsed = evaluateVoiceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: parsed.error.issues[0].message });
+        return;
+      }
+
+      const { prompt, transcript, topicOrProblem } = parsed.data;
+      const aiProvider = getAIProvider();
+      const review = await aiProvider.evaluateSpokenReasoning(prompt, transcript, topicOrProblem);
+      res.json(review);
+    } catch (err: any) {
+      console.error('[TutorRoute] Error evaluating voice reasoning:', err);
+      res.status(500).json({ error: err.message || 'Failed to evaluate voice reasoning' });
     }
   }
 );

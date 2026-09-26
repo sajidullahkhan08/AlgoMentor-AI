@@ -21,6 +21,7 @@ import {
   ProblemHintResponse,
 } from '../../../lib/api';
 import { VisualArrayTrace } from '../../../components/VisualArrayTrace';
+import { VoiceReasoningModal } from '../../../components/VoiceReasoningModal';
 
 export default function ProblemWorkspaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -40,6 +41,7 @@ export default function ProblemWorkspaceScreen() {
   const [hintLevel, setHintLevel] = useState<number>(0);
   const [hints, setHints] = useState<ProblemHintResponse[]>([]);
   const [loadingHint, setLoadingHint] = useState<boolean>(false);
+  const [showVoiceModal, setShowVoiceModal] = useState<boolean>(false);
 
   const loadProblemData = useCallback(async () => {
     if (!id) return;
@@ -273,6 +275,15 @@ export default function ProblemWorkspaceScreen() {
               onPress={() => setActiveTab('editor')}
             >
               <Text style={styles.openEditorButtonText}>Open Code Editor & Solve ➔</Text>
+            </TouchableOpacity>
+
+            {/* Verbal Reasoning Studio Button */}
+            <TouchableOpacity
+              style={styles.voiceReasoningButton}
+              onPress={() => setShowVoiceModal(true)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.voiceReasoningButtonText}>🎙️ Speak Verbal Reasoning (AI Review)</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -569,6 +580,15 @@ export default function ProblemWorkspaceScreen() {
           </View>
         )}
       </ScrollView>
+
+      {problem && (
+        <VoiceReasoningModal
+          visible={showVoiceModal}
+          onClose={() => setShowVoiceModal(false)}
+          promptText={`Explain the optimal approach, invariants, and time complexity for "${problem.title}"`}
+          topicOrProblem={problem.title}
+        />
+      )}
     </View>
   );
 }
@@ -1102,5 +1122,20 @@ const styles = StyleSheet.create({
     color: '#38bdf8',
     fontSize: 13,
     fontWeight: '600',
+  },
+  voiceReasoningButton: {
+    marginTop: 10,
+    backgroundColor: '#1e1b4b',
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  voiceReasoningButtonText: {
+    color: '#a5b4fc',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

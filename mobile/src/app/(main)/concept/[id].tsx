@@ -140,6 +140,43 @@ export default function ConceptDetailScreen() {
           )}
         </View>
 
+        {/* Relevant Interactive Visualizer Link */}
+        {(() => {
+          const lower = concept.name.toLowerCase();
+          let visualizerInfo: { type: string; label: string } | null = null;
+          if (lower.includes('binary search') || lower.includes('search space')) {
+            visualizerInfo = { type: 'array_search', label: 'Binary Search Invariant Tracer' };
+          } else if (lower.includes('big-o') || lower.includes('complexity') || lower.includes('logarithmic')) {
+            visualizerInfo = { type: 'complexity', label: 'Big-O Growth Rate Simulator' };
+          } else if (lower.includes('array')) {
+            visualizerInfo = { type: 'two_pointers', label: 'Two-Pointer & Sliding Window Visualizer' };
+          }
+
+          if (!visualizerInfo) return null;
+
+          return (
+            <TouchableOpacity
+              style={styles.visualizerCard}
+              activeOpacity={0.8}
+              onPress={() =>
+                router.push({
+                  pathname: '/(main)/visualizers/[type]',
+                  params: { type: visualizerInfo!.type },
+                } as any)
+              }
+            >
+              <View style={styles.visualizerCardHeader}>
+                <Text style={styles.visualizerCardBadge}>✨ Interactive Mental Model</Text>
+                <Text style={styles.visualizerCardArrow}>Launch ➔</Text>
+              </View>
+              <Text style={styles.visualizerCardTitle}>{visualizerInfo.label}</Text>
+              <Text style={styles.visualizerCardSub}>
+                Interact with the visual invariant diagram for this concept
+              </Text>
+            </TouchableOpacity>
+          );
+        })()}
+
         {/* Learning objectives */}
         {concept.learning_objectives && concept.learning_objectives.length > 0 && (
           <View style={styles.section}>
@@ -360,5 +397,40 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',
+  },
+  visualizerCard: {
+    backgroundColor: '#0c2238',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#0284c7',
+    marginBottom: 20,
+    gap: 4,
+  },
+  visualizerCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  visualizerCardBadge: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#38bdf8',
+    textTransform: 'uppercase',
+  },
+  visualizerCardArrow: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#38bdf8',
+  },
+  visualizerCardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#f8fafc',
+  },
+  visualizerCardSub: {
+    fontSize: 12,
+    color: '#94a3b8',
   },
 });

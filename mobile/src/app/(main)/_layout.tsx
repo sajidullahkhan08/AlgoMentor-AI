@@ -38,6 +38,34 @@ export default function MainLayout() {
         name="problems/[id]"
         options={{ title: 'Problem Workspace' }}
       />
+      <Stack.Screen
+        name="visualizers/index"
+        options={{ title: 'Mental Models' }}
+      />
+      <Stack.Screen
+        name="visualizers/[type]"
+        options={{ title: 'Interactive Visualizer' }}
+      />
+      <Stack.Screen
+        name="voice/index"
+        options={{ title: 'Verbal Reasoning Studio' }}
+      />
+      <Stack.Screen
+        name="revision/index"
+        options={{ title: 'Revision & Spaced Practice' }}
+      />
+      <Stack.Screen
+        name="revision/practice"
+        options={{ title: 'Daily Retrieval Session' }}
+      />
+      <Stack.Screen
+        name="system-design/index"
+        options={{ title: 'System Design Studio' }}
+      />
+      <Stack.Screen
+        name="system-design/[id]"
+        options={{ title: 'Architecture Scenario' }}
+      />
     </Stack>
   );
 }

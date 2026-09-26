@@ -14,6 +14,7 @@ import {
   EvaluationResult,
   GeneratedHint,
   CodeReviewResult,
+  SpokenReasoningReviewResult,
 } from './aiProvider';
 import { MockAIProvider } from './mockProvider';
 
@@ -309,5 +310,72 @@ Task: Perform a Socratic code review of the student's solution.
       return this.fallbackMock.reviewCode(problem, code, language, testSummary);
     }
   }
+
+  async evaluateSpokenReasoning(
+    prompt: string,
+    transcript: string,
+    conceptOrProblemName: string
+  ): Promise<SpokenReasoningReviewResult> {
+    const aiPrompt = `The student was asked to explain their thought process verbally for: "${conceptOrProblemName}".
+Context / Question: ${prompt}
+Spoken Student Transcript:
+"""
+${transcript}
+"""
+
+Evaluate their verbal communication as an expert CS technical interviewer and Socratic tutor:
+1. clarityScore: 0.0 to 1.0 rating how clearly they communicated.
+2. accuracyScore: 0.0 to 1.0 rating algorithmic accuracy of their explanation.
+3. conceptualGrasps: Array of key concepts or invariants they correctly grasped.
+4. missingPoints: Array of critical edge cases, preconditions, or invariants they overlooked.
+5. socraticFollowUp: A concise probing Socratic question to guide them further.
+6. feedback: Encouraging, constructive Socratic feedback.
+7. interviewDeliveryTip: Actionable advice for technical interviews (e.g. stating trade-offs first, pacing).`;
+
+    try {
+      const res = await this.ai.models.generateContent({
+        model: this.model,
+        contents: aiPrompt,
+        config: {
+          systemInstruction: SYSTEM_INSTRUCTION,
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              clarityScore: { type: Type.NUMBER },
+              accuracyScore: { type: Type.NUMBER },
+              conceptualGrasps: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              missingPoints: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+              },
+              socraticFollowUp: { type: Type.STRING },
+              feedback: { type: Type.STRING },
+              interviewDeliveryTip: { type: Type.STRING },
+            },
+            required: [
+              'clarityScore',
+              'accuracyScore',
+              'conceptualGrasps',
+              'missingPoints',
+              'socraticFollowUp',
+              'feedback',
+              'interviewDeliveryTip',
+            ],
+          },
+        },
+      });
+
+      const text = res.text || '{}';
+      return JSON.parse(text) as SpokenReasoningReviewResult;
+    } catch (err: any) {
+      console.warn('[GeminiProvider] evaluateSpokenReasoning failed, using mock fallback:', err.message);
+      return this.fallbackMock.evaluateSpokenReasoning(prompt, transcript, conceptOrProblemName);
+    }
+  }
 }
+
 
