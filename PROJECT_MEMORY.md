@@ -283,6 +283,7 @@ Whenever implementation reveals something important that future developers would
 - **Supabase URL formatting:** Supabase project URL should never contain `/rest/v1`. The SDK appends specific path segments (e.g. `/auth/v1/signup`, `/rest/v1/...`). Both `mobile/src/lib/supabase.ts` and `backend/src/config/env.ts` now defensively strip accidental `/rest/v1` and trailing slashes.
 - **Expo Router Web SSR:** Web pre-rendering (`output: "static"`) runs in Node.js where `window` is undefined. Using `output: "single"` in `app.json` and wrapping `AsyncStorage` with an SSR-safe storage adapter prevents `ReferenceError: window is not defined`.
 - **AI Provider Fallback:** The application includes a deterministic `MockAIProvider` so development and automated tests run seamlessly even without an external API key or network connectivity.
+- **Expo Go Physical Device Connectivity:** When testing via Expo Go on a physical device, `localhost` refers to the phone itself, not the host machine. The mobile API client (`mobile/src/lib/api.ts`) auto-detects the dev machine's LAN IP from `Constants.expoConfig.hostUri` / `debuggerHost`. The backend binds to `0.0.0.0` instead of localhost to accept LAN connections.
 
 ---
 
@@ -300,6 +301,12 @@ Whenever implementation reveals something important that future developers would
 - **Permanent solution:** Configured `web.output: "single"` in `app.json` and added SSR-safe storage adapter.
 - **Status:** Resolved.
 
+### Resolved: Mobile connectivity (Failed to connect to localhost/127.0.0.1:3000)
+- **Problem:** `java.net.ConnectException: Failed to connect to localhost/127.0.0.1:3000` when testing on physical device via Expo Go.
+- **Cause:** `localhost` on a phone refers to the phone itself, not the host machine running the backend.
+- **Permanent solution:** Auto-detect dev machine LAN IP via `expo-constants` `debuggerHost` in `api.ts`; backend listens on `0.0.0.0`.
+- **Status:** Resolved.
+
 ---
 
 # 14. Handoff Notes
@@ -315,11 +322,11 @@ Phase 7 (Voice & Verbal Reasoning), Phase 8 (Revision & Spaced Repetition), Phas
 
 ### Current task
 
-All architectural phases of AlgoMentor AI are complete, integrated, and verified.
+Content expansion and polish. Expanded DSA pattern catalog from 3 → 15 patterns and problem catalog from 3 → 12 problems, inspired by AlgoMaster.io's pattern-based learning approach. Fixed mobile connectivity for physical device testing.
 
 ### Immediate next step
 
-End-to-end user testing on device / browser, followed by final graduation/FYP deliverable review.
+End-to-end user testing on device / browser. Further content expansion. UI polish and performance optimization.
 
 ### Current blocker
 

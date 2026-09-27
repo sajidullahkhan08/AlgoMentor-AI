@@ -42,9 +42,11 @@ app.use(errorHandler);
 
 // --- Start server ---
 const PORT = env.PORT;
-app.listen(PORT, () => {
-  console.log(`[AlgoMentor] Backend running on http://localhost:${PORT}`);
+const HOST = '0.0.0.0'; // Bind to all interfaces so physical devices on the LAN can connect
+app.listen(PORT, HOST, () => {
+  console.log(`[AlgoMentor] Backend running on http://${HOST}:${PORT}`);
   console.log(`[AlgoMentor] Environment: ${env.NODE_ENV}`);
+  console.log(`[AlgoMentor] For Expo Go on a physical device, use your computer's LAN IP (e.g. http://192.168.x.x:${PORT}/api)`);
 });
 
 export default app;

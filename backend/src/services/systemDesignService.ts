@@ -194,6 +194,158 @@ const SEED_SCENARIOS: SystemDesignScenario[] = [
       },
     ],
   },
+  {
+    id: 'b1000000-0000-0000-0000-000000000004',
+    slug: 'news-feed',
+    title: 'Social Media News Feed (Instagram / Twitter)',
+    description:
+      'Design a personalized feed system that aggregates, ranks, and delivers posts from followed users in near real-time, supporting billions of feed reads per day.',
+    difficulty: 'intermediate',
+    category: 'Fan-Out & Content Aggregation',
+    scale_metrics: {
+      daily_active_users: '500 Million DAU',
+      follows_per_user: '500 average',
+      posts_per_day: '100 Million new posts',
+      feed_reads_per_day: '10 Billion',
+      p99_latency: '< 200ms feed generation',
+    },
+    functional_requirements: [
+      'Show a personalized feed of posts from accounts the user follows.',
+      'Support chronological and algorithmic (ML-ranked) feed modes.',
+      'New posts should appear in followers\' feeds within seconds.',
+      'Support pagination (infinite scroll) with stable cursor.',
+    ],
+    non_functional_requirements: [
+      'Low latency feed reads (< 200ms for first page).',
+      'High availability — feed is the core product surface.',
+      'Consistency: A post should eventually appear in all followers\' feeds.',
+    ],
+    architecture_components: [
+      { id: 'api_gateway', name: 'API Gateway / Load Balancer', role: 'Routes feed requests and handles authentication.' },
+      { id: 'feed_service', name: 'Feed Generation Service', role: 'Assembles and ranks feed items from pre-computed or on-demand sources.' },
+      { id: 'fanout_service', name: 'Fan-Out Service', role: 'Pushes new posts into followers\' pre-computed feed caches (fan-out on write).' },
+      { id: 'post_db', name: 'Posts Database (Cassandra)', role: 'Stores all post content partitioned by user_id.' },
+      { id: 'feed_cache', name: 'Feed Cache (Redis Sorted Sets)', role: 'Stores pre-computed feed per user as sorted sets with timestamps as scores.' },
+      { id: 'ranking_service', name: 'ML Ranking Service', role: 'Scores and reorders feed items by engagement probability.' },
+    ],
+    trade_off_questions: [
+      {
+        id: 'q1',
+        question: 'Fan-Out on Write vs Fan-Out on Read?',
+        trade_off:
+          'Fan-Out on Write pre-computes feeds when a post is created (fast reads, high write amplification for celebrities with millions of followers). Fan-Out on Read computes feeds at request time (slow reads, no write amplification). Hybrid approach: fan-out on write for normal users, fan-out on read for celebrity accounts.',
+      },
+      {
+        id: 'q2',
+        question: 'How do you handle a celebrity with 100M followers posting?',
+        trade_off:
+          'Writing to 100M feed caches takes minutes and overwhelms the fan-out service. Use a hybrid model: skip fan-out for celebrity posts and merge them at read time from a "celebrity posts" cache into the user\'s feed.',
+      },
+      {
+        id: 'q3',
+        question: 'How do you ensure feed consistency when posts are deleted?',
+        trade_off:
+          'Lazy deletion (mark deleted, filter at read time) is fast but wastes cache space. Eager deletion (remove from all feed caches) is expensive for popular posts. Best approach: soft-delete in DB + lazy filter at read + background cleanup job.',
+      },
+    ],
+  },
+  {
+    id: 'b1000000-0000-0000-0000-000000000005',
+    slug: 'key-value-store',
+    title: 'Distributed Key-Value Store (Redis / DynamoDB)',
+    description:
+      'Design a highly available, partition-tolerant key-value store that supports sub-millisecond reads and writes across multiple data centers.',
+    difficulty: 'advanced',
+    category: 'Distributed Storage & Consensus',
+    scale_metrics: {
+      total_data: '100 TB across 1000+ nodes',
+      read_qps: '10 Million reads/sec',
+      write_qps: '1 Million writes/sec',
+      latency_p99: '< 5ms for reads, < 10ms for writes',
+      availability: '99.999% (five nines)',
+    },
+    functional_requirements: [
+      'Support GET(key), PUT(key, value), DELETE(key) operations.',
+      'Data partitioned across nodes using consistent hashing.',
+      'Configurable replication factor (default: 3 replicas).',
+      'Support tunable consistency (strong vs eventual).',
+    ],
+    non_functional_requirements: [
+      'Partition tolerance: continue operating during network splits.',
+      'Automatic failure detection and data re-replication.',
+      'No single point of failure — fully decentralized (gossip protocol).',
+    ],
+    architecture_components: [
+      { id: 'client_lib', name: 'Smart Client Library', role: 'Routes requests directly to the responsible node using consistent hash ring.' },
+      { id: 'hash_ring', name: 'Consistent Hash Ring', role: 'Maps keys to nodes with virtual nodes for uniform distribution.' },
+      { id: 'storage_node', name: 'Storage Nodes (LSM Tree + SSTables)', role: 'Write-optimized log-structured merge tree storage engine.' },
+      { id: 'replication_mgr', name: 'Replication Manager', role: 'Synchronously or asynchronously replicates writes to N-1 replica nodes.' },
+      { id: 'gossip_protocol', name: 'Gossip / Failure Detector', role: 'Decentralized membership protocol detecting node failures.' },
+      { id: 'conflict_resolver', name: 'Conflict Resolution (Vector Clocks)', role: 'Detects and resolves concurrent writes using vector clocks or last-write-wins.' },
+    ],
+    trade_off_questions: [
+      {
+        id: 'q1',
+        question: 'Strong Consistency vs Eventual Consistency?',
+        trade_off:
+          'Strong consistency (quorum reads/writes: R + W > N) guarantees read-your-writes but increases latency due to synchronous replication. Eventual consistency (W=1, R=1) gives lowest latency but clients may read stale data.',
+      },
+      {
+        id: 'q2',
+        question: 'How do you handle data rebalancing when a node joins or leaves?',
+        trade_off:
+          'Consistent hashing with virtual nodes minimizes data movement (only K/N keys move). Without virtual nodes, hot spots emerge as the hash ring becomes unbalanced.',
+      },
+    ],
+  },
+  {
+    id: 'b1000000-0000-0000-0000-000000000006',
+    slug: 'notification-system',
+    title: 'Push Notification System (Firebase / APNs)',
+    description:
+      'Design a multi-channel notification platform that delivers push, SMS, and email notifications with high reliability, deduplication, and user preference management.',
+    difficulty: 'beginner',
+    category: 'Async Processing & Message Queues',
+    scale_metrics: {
+      notifications_per_day: '1 Billion',
+      peak_qps: '100,000 notifications/sec',
+      channels: 'Push (iOS APNs, Android FCM), SMS, Email',
+      delivery_sla: '< 5 seconds for push, < 30 seconds for email',
+    },
+    functional_requirements: [
+      'Send notifications via push, SMS, and email channels.',
+      'User preference management (opt-in/opt-out per channel).',
+      'Template-based notification content with variable substitution.',
+      'Delivery tracking and retry for failed sends.',
+    ],
+    non_functional_requirements: [
+      'At-least-once delivery guarantee with deduplication.',
+      'Horizontal scalability to handle traffic spikes (e.g. flash sales).',
+      'Rate limiting per user to prevent notification fatigue.',
+    ],
+    architecture_components: [
+      { id: 'api_service', name: 'Notification API Service', role: 'Accepts notification requests, validates payload, and enqueues to message queue.' },
+      { id: 'message_queue', name: 'Message Queue (Kafka / SQS)', role: 'Decouples producers from consumers, buffers during traffic spikes.' },
+      { id: 'preference_db', name: 'User Preference Store', role: 'Stores per-user notification settings and device tokens.' },
+      { id: 'push_worker', name: 'Push Notification Workers', role: 'Consumes from queue and sends to APNs/FCM via their respective APIs.' },
+      { id: 'email_worker', name: 'Email / SMS Workers', role: 'Sends email via SendGrid/SES and SMS via Twilio.' },
+      { id: 'dedup_cache', name: 'Deduplication Cache (Redis)', role: 'Prevents duplicate notification delivery using idempotency keys with TTL.' },
+    ],
+    trade_off_questions: [
+      {
+        id: 'q1',
+        question: 'Pull-based vs Push-based notification delivery?',
+        trade_off:
+          'Push-based (server sends to device) gives real-time delivery but requires persistent connections or third-party services (APNs/FCM). Pull-based (client polls) is simpler but wastes bandwidth and introduces latency.',
+      },
+      {
+        id: 'q2',
+        question: 'How do you handle a notification storm (e.g., sending to 100M users simultaneously)?',
+        trade_off:
+          'Sending all at once overwhelms downstream services. Use a message queue with rate-limited consumers that process in batches. Priority queues ensure time-sensitive notifications (OTP, alerts) are delivered first.',
+      },
+    ],
+  },
 ];
 
 export class SystemDesignService {
