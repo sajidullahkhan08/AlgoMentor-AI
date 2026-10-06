@@ -835,6 +835,465 @@ You may assume that you have an infinite number of each kind of coin.`,
       { input: [[-1, -2, -3, -4], 2], expected_output: -3 },
     ],
   },
+  // ======= WAVE 2: Cover uncovered & under-covered patterns =======
+  // --- BFS (Pattern 007) ---
+  {
+    id: '66666666-0001-0001-0001-000000000013',
+    title: 'Number of Islands',
+    description: `Given an \`m x n\` 2D binary grid \`grid\` which represents a map of \`'1'\`s (land) and \`'0'\`s (water), return the number of islands.
+
+An island is surrounded by water and is formed by connecting adjacent lands horizontally or vertically. You may assume all four edges of the grid are surrounded by water.`,
+    difficulty: 'medium',
+    category: 'Graph',
+    pattern_id: '55555555-0001-0001-0001-000000000007',
+    constraints: [
+      'm == grid.length',
+      'n == grid[i].length',
+      '1 <= m, n <= 300',
+      "grid[i][j] is '0' or '1'",
+    ],
+    examples: [
+      { input: 'grid = [["1","1","1","1","0"],["1","1","0","1","0"],["1","1","0","0","0"],["0","0","0","0","0"]]', output: '1' },
+      { input: 'grid = [["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]', output: '3' },
+    ],
+    starter_code: {
+      javascript: `function numIslands(grid) {\n  // Your code here\n}`,
+      python: `def numIslands(grid: list[list[str]]) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]], expected_output: 3 },
+      { input: [[["1","1","1"],["0","1","0"],["1","1","1"]]], expected_output: 1 },
+      { input: [[["0"]]], expected_output: 0 },
+      { input: [[["1"]]], expected_output: 1 },
+    ],
+  },
+  {
+    id: '66666666-0001-0001-0001-000000000014',
+    title: 'Rotting Oranges',
+    description: `You are given an \`m x n\` grid where each cell can have one of three values: \`0\` (empty), \`1\` (fresh orange), or \`2\` (rotten orange). Every minute, any fresh orange adjacent (4-directionally) to a rotten orange becomes rotten. Return the minimum number of minutes that must elapse until no cell has a fresh orange. If this is impossible, return \`-1\`.`,
+    difficulty: 'medium',
+    category: 'Graph',
+    pattern_id: '55555555-0001-0001-0001-000000000007',
+    constraints: ['m == grid.length', 'n == grid[i].length', '1 <= m, n <= 10', 'grid[i][j] is 0, 1, or 2'],
+    examples: [
+      { input: 'grid = [[2,1,1],[1,1,0],[0,1,1]]', output: '4' },
+      { input: 'grid = [[2,1,1],[0,1,1],[1,0,1]]', output: '-1' },
+      { input: 'grid = [[0,2]]', output: '0' },
+    ],
+    starter_code: {
+      javascript: `function orangesRotting(grid) {\n  // Your code here\n}`,
+      python: `def orangesRotting(grid: list[list[int]]) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[[2,1,1],[1,1,0],[0,1,1]]], expected_output: 4 },
+      { input: [[[2,1,1],[0,1,1],[1,0,1]]], expected_output: -1 },
+      { input: [[[0,2]]], expected_output: 0 },
+      { input: [[[0]]], expected_output: 0 },
+    ],
+  },
+  // --- DFS (Pattern 008) ---
+  {
+    id: '66666666-0001-0001-0001-000000000015',
+    title: 'Maximum Depth of Binary Tree',
+    description: `Given the \`root\` of a binary tree, return its maximum depth.
+
+A binary tree's maximum depth is the number of nodes along the longest path from the root node down to the farthest leaf node.
+
+Input is given as a level-order array where \`null\` represents absent nodes.`,
+    difficulty: 'easy',
+    category: 'Trees',
+    pattern_id: '55555555-0001-0001-0001-000000000008',
+    constraints: ['The number of nodes is in the range [0, 10^4]', '-100 <= Node.val <= 100'],
+    examples: [
+      { input: 'root = [3,9,20,null,null,15,7]', output: '3' },
+      { input: 'root = [1,null,2]', output: '2' },
+    ],
+    starter_code: {
+      javascript: `function maxDepth(root) {\n  // Your code here\n}`,
+      python: `def maxDepth(root) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[3,9,20,null,null,15,7]], expected_output: 3 },
+      { input: [[1,null,2]], expected_output: 2 },
+      { input: [[]], expected_output: 0 },
+      { input: [[1]], expected_output: 1 },
+    ],
+  },
+  {
+    id: '66666666-0001-0001-0001-000000000016',
+    title: 'Path Sum',
+    description: `Given the \`root\` of a binary tree and an integer \`targetSum\`, return \`true\` if the tree has a root-to-leaf path such that adding up all the values along the path equals \`targetSum\`.
+
+A leaf is a node with no children.`,
+    difficulty: 'easy',
+    category: 'Trees',
+    pattern_id: '55555555-0001-0001-0001-000000000008',
+    constraints: ['The number of nodes is in the range [0, 5000]', '-1000 <= Node.val <= 1000', '-1000 <= targetSum <= 1000'],
+    examples: [
+      { input: 'root = [5,4,8,11,null,13,4,7,2,null,null,null,1], targetSum = 22', output: 'true', explanation: 'Path: 5 -> 4 -> 11 -> 2 sums to 22' },
+      { input: 'root = [1,2,3], targetSum = 5', output: 'false' },
+    ],
+    starter_code: {
+      javascript: `function hasPathSum(root, targetSum) {\n  // Your code here\n}`,
+      python: `def hasPathSum(root, targetSum: int) -> bool:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[5,4,8,11,null,13,4,7,2,null,null,null,1], 22], expected_output: true },
+      { input: [[1,2,3], 5], expected_output: false },
+      { input: [[], 0], expected_output: false },
+      { input: [[1], 1], expected_output: true },
+    ],
+  },
+  // --- Backtracking (Pattern 009) ---
+  {
+    id: '66666666-0001-0001-0001-000000000017',
+    title: 'Subsets',
+    description: `Given an integer array \`nums\` of unique elements, return all possible subsets (the power set).
+
+The solution set must not contain duplicate subsets. Return the solution in any order.`,
+    difficulty: 'medium',
+    category: 'Backtracking',
+    pattern_id: '55555555-0001-0001-0001-000000000009',
+    constraints: ['1 <= nums.length <= 10', '-10 <= nums[i] <= 10', 'All elements are unique'],
+    examples: [
+      { input: 'nums = [1,2,3]', output: '[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]' },
+      { input: 'nums = [0]', output: '[[],[0]]' },
+    ],
+    starter_code: {
+      javascript: `function subsets(nums) {\n  // Your code here\n}`,
+      python: `def subsets(nums: list[int]) -> list[list[int]]:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[1,2,3]], expected_output: [[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]] },
+      { input: [[0]], expected_output: [[],[0]] },
+    ],
+  },
+  {
+    id: '66666666-0001-0001-0001-000000000018',
+    title: 'Permutations',
+    description: `Given an array \`nums\` of distinct integers, return all possible permutations. You can return the answer in any order.`,
+    difficulty: 'medium',
+    category: 'Backtracking',
+    pattern_id: '55555555-0001-0001-0001-000000000009',
+    constraints: ['1 <= nums.length <= 6', '-10 <= nums[i] <= 10', 'All elements are unique'],
+    examples: [
+      { input: 'nums = [1,2,3]', output: '[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]' },
+      { input: 'nums = [1]', output: '[[1]]' },
+    ],
+    starter_code: {
+      javascript: `function permute(nums) {\n  // Your code here\n}`,
+      python: `def permute(nums: list[int]) -> list[list[int]]:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[1,2,3]], expected_output: [[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]] },
+      { input: [[0,1]], expected_output: [[0,1],[1,0]] },
+      { input: [[1]], expected_output: [[1]] },
+    ],
+  },
+  // --- DP 2D (Pattern 011) ---
+  {
+    id: '66666666-0001-0001-0001-000000000019',
+    title: 'Unique Paths',
+    description: `A robot is located at the top-left corner of an \`m x n\` grid. The robot can only move either down or right at any point in time.
+
+How many possible unique paths are there to reach the bottom-right corner?`,
+    difficulty: 'medium',
+    category: 'Dynamic Programming',
+    pattern_id: '55555555-0001-0001-0001-000000000011',
+    constraints: ['1 <= m, n <= 100'],
+    examples: [
+      { input: 'm = 3, n = 7', output: '28' },
+      { input: 'm = 3, n = 2', output: '3', explanation: 'Right+Down+Down, Down+Down+Right, Down+Right+Down' },
+    ],
+    starter_code: {
+      javascript: `function uniquePaths(m, n) {\n  // Your code here\n}`,
+      python: `def uniquePaths(m: int, n: int) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [3, 7], expected_output: 28 },
+      { input: [3, 2], expected_output: 3 },
+      { input: [1, 1], expected_output: 1 },
+      { input: [7, 3], expected_output: 28 },
+      { input: [3, 3], expected_output: 6 },
+    ],
+  },
+  {
+    id: '66666666-0001-0001-0001-000000000020',
+    title: 'Longest Common Subsequence',
+    description: `Given two strings \`text1\` and \`text2\`, return the length of their longest common subsequence. If there is no common subsequence, return \`0\`.
+
+A subsequence of a string is a new string generated from the original string with some characters deleted without changing the relative order.`,
+    difficulty: 'medium',
+    category: 'Dynamic Programming',
+    pattern_id: '55555555-0001-0001-0001-000000000011',
+    constraints: ['1 <= text1.length, text2.length <= 1000', 'text1 and text2 consist of only lowercase English characters'],
+    examples: [
+      { input: 'text1 = "abcde", text2 = "ace"', output: '3', explanation: 'LCS is "ace"' },
+      { input: 'text1 = "abc", text2 = "def"', output: '0' },
+    ],
+    starter_code: {
+      javascript: `function longestCommonSubsequence(text1, text2) {\n  // Your code here\n}`,
+      python: `def longestCommonSubsequence(text1: str, text2: str) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: ['abcde', 'ace'], expected_output: 3 },
+      { input: ['abc', 'abc'], expected_output: 3 },
+      { input: ['abc', 'def'], expected_output: 0 },
+      { input: ['bl', 'yby'], expected_output: 1 },
+    ],
+  },
+  // --- Greedy (Pattern 012) ---
+  {
+    id: '66666666-0001-0001-0001-000000000021',
+    title: 'Jump Game',
+    description: `You are given an integer array \`nums\`. You are initially positioned at the first index, and each element represents your maximum jump length at that position.
+
+Return \`true\` if you can reach the last index, or \`false\` otherwise.`,
+    difficulty: 'medium',
+    category: 'Greedy',
+    pattern_id: '55555555-0001-0001-0001-000000000012',
+    constraints: ['1 <= nums.length <= 10^4', '0 <= nums[i] <= 10^5'],
+    examples: [
+      { input: 'nums = [2,3,1,1,4]', output: 'true', explanation: 'Jump 1 step from index 0 to 1, then 3 steps to the last' },
+      { input: 'nums = [3,2,1,0,4]', output: 'false', explanation: 'Always stuck at index 3' },
+    ],
+    starter_code: {
+      javascript: `function canJump(nums) {\n  // Your code here\n}`,
+      python: `def canJump(nums: list[int]) -> bool:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[2,3,1,1,4]], expected_output: true },
+      { input: [[3,2,1,0,4]], expected_output: false },
+      { input: [[0]], expected_output: true },
+      { input: [[2,0]], expected_output: true },
+      { input: [[1,0,1,0]], expected_output: false },
+    ],
+  },
+  {
+    id: '66666666-0001-0001-0001-000000000022',
+    title: 'Non-overlapping Intervals',
+    description: `Given an array of intervals \`intervals\` where \`intervals[i] = [start_i, end_i]\`, return the minimum number of intervals you need to remove to make the rest of the intervals non-overlapping.`,
+    difficulty: 'medium',
+    category: 'Greedy',
+    pattern_id: '55555555-0001-0001-0001-000000000012',
+    constraints: ['1 <= intervals.length <= 10^5', 'intervals[i].length == 2', '-5 * 10^4 <= start_i < end_i <= 5 * 10^4'],
+    examples: [
+      { input: 'intervals = [[1,2],[2,3],[3,4],[1,3]]', output: '1', explanation: 'Remove [1,3] to make the rest non-overlapping' },
+      { input: 'intervals = [[1,2],[1,2],[1,2]]', output: '2' },
+    ],
+    starter_code: {
+      javascript: `function eraseOverlapIntervals(intervals) {\n  // Your code here\n}`,
+      python: `def eraseOverlapIntervals(intervals: list[list[int]]) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[[1,2],[2,3],[3,4],[1,3]]], expected_output: 1 },
+      { input: [[[1,2],[1,2],[1,2]]], expected_output: 2 },
+      { input: [[[1,2],[2,3]]], expected_output: 0 },
+    ],
+  },
+  // --- Linked List (Pattern 013) ---
+  {
+    id: '66666666-0001-0001-0001-000000000023',
+    title: 'Reverse Linked List',
+    description: `Given the \`head\` of a singly linked list, reverse the list, and return the reversed list.
+
+Input is given as an array for simplicity. Return the reversed array.`,
+    difficulty: 'easy',
+    category: 'Linked List',
+    pattern_id: '55555555-0001-0001-0001-000000000013',
+    constraints: ['The number of nodes is in the range [0, 5000]', '-5000 <= Node.val <= 5000'],
+    examples: [
+      { input: 'head = [1,2,3,4,5]', output: '[5,4,3,2,1]' },
+      { input: 'head = [1,2]', output: '[2,1]' },
+      { input: 'head = []', output: '[]' },
+    ],
+    starter_code: {
+      javascript: `function reverseList(head) {\n  // Treat head as an array. Reverse it in-place or return a new reversed array.\n  // Your code here\n}`,
+      python: `def reverseList(head: list[int]) -> list[int]:\n    # Treat head as an array. Return the reversed list.\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[1,2,3,4,5]], expected_output: [5,4,3,2,1] },
+      { input: [[1,2]], expected_output: [2,1] },
+      { input: [[]], expected_output: [] },
+      { input: [[1]], expected_output: [1] },
+    ],
+  },
+  {
+    id: '66666666-0001-0001-0001-000000000024',
+    title: 'Linked List Cycle Detection',
+    description: `Given \`head\`, the head of a linked list, determine if the linked list has a cycle in it.
+
+For simplicity, the input is an array and a \`pos\` value indicating where the tail connects to (0-indexed, -1 if no cycle). Return \`true\` if there is a cycle, \`false\` otherwise.`,
+    difficulty: 'easy',
+    category: 'Linked List',
+    pattern_id: '55555555-0001-0001-0001-000000000013',
+    constraints: ['The number of nodes is in the range [0, 10^4]', '-10^5 <= Node.val <= 10^5', 'pos is -1 or a valid index'],
+    examples: [
+      { input: 'head = [3,2,0,-4], pos = 1', output: 'true', explanation: 'Tail connects to node index 1' },
+      { input: 'head = [1], pos = -1', output: 'false' },
+    ],
+    starter_code: {
+      javascript: `function hasCycle(head, pos) {\n  // Your code here — use Floyd's fast/slow pointer approach\n}`,
+      python: `def hasCycle(head: list[int], pos: int) -> bool:\n    # Your code here — use Floyd's fast/slow pointer approach\n    pass`,
+    },
+    test_cases: [
+      { input: [[3,2,0,-4], 1], expected_output: true },
+      { input: [[1,2], 0], expected_output: true },
+      { input: [[1], -1], expected_output: false },
+      { input: [[], -1], expected_output: false },
+    ],
+  },
+  // --- Heap / Priority Queue (Pattern 014) ---
+  {
+    id: '66666666-0001-0001-0001-000000000025',
+    title: 'Kth Largest Element in an Array',
+    description: `Given an integer array \`nums\` and an integer \`k\`, return the \`kth\` largest element in the array.
+
+Note that it is the \`kth\` largest element in sorted order, not the \`kth\` distinct element.`,
+    difficulty: 'medium',
+    category: 'Sorting',
+    pattern_id: '55555555-0001-0001-0001-000000000014',
+    constraints: ['1 <= k <= nums.length <= 10^5', '-10^4 <= nums[i] <= 10^4'],
+    examples: [
+      { input: 'nums = [3,2,1,5,6,4], k = 2', output: '5' },
+      { input: 'nums = [3,2,3,1,2,4,5,5,6], k = 4', output: '4' },
+    ],
+    starter_code: {
+      javascript: `function findKthLargest(nums, k) {\n  // Your code here\n}`,
+      python: `def findKthLargest(nums: list[int], k: int) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[3,2,1,5,6,4], 2], expected_output: 5 },
+      { input: [[3,2,3,1,2,4,5,5,6], 4], expected_output: 4 },
+      { input: [[1], 1], expected_output: 1 },
+      { input: [[7,6,5,4,3,2,1], 5], expected_output: 3 },
+    ],
+  },
+  {
+    id: '66666666-0001-0001-0001-000000000026',
+    title: 'Top K Frequent Elements',
+    description: `Given an integer array \`nums\` and an integer \`k\`, return the \`k\` most frequent elements. You may return the answer in any order.`,
+    difficulty: 'medium',
+    category: 'Hash Map',
+    pattern_id: '55555555-0001-0001-0001-000000000014',
+    constraints: ['1 <= nums.length <= 10^5', '-10^4 <= nums[i] <= 10^4', 'k is in the range [1, number of unique elements]'],
+    examples: [
+      { input: 'nums = [1,1,1,2,2,3], k = 2', output: '[1,2]' },
+      { input: 'nums = [1], k = 1', output: '[1]' },
+    ],
+    starter_code: {
+      javascript: `function topKFrequent(nums, k) {\n  // Your code here\n}`,
+      python: `def topKFrequent(nums: list[int], k: int) -> list[int]:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[1,1,1,2,2,3], 2], expected_output: [1,2] },
+      { input: [[1], 1], expected_output: [1] },
+      { input: [[4,4,4,1,1,2,2,2,3], 2], expected_output: [4,2] },
+    ],
+  },
+  // --- More Two Pointers (Pattern 003) ---
+  {
+    id: '66666666-0001-0001-0001-000000000027',
+    title: 'Valid Palindrome',
+    description: `A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.
+
+Given a string \`s\`, return \`true\` if it is a palindrome, or \`false\` otherwise.`,
+    difficulty: 'easy',
+    category: 'Strings',
+    pattern_id: '55555555-0001-0001-0001-000000000003',
+    constraints: ['1 <= s.length <= 2 * 10^5', 's consists only of printable ASCII characters'],
+    examples: [
+      { input: 's = "A man, a plan, a canal: Panama"', output: 'true' },
+      { input: 's = "race a car"', output: 'false' },
+      { input: 's = " "', output: 'true' },
+    ],
+    starter_code: {
+      javascript: `function isPalindrome(s) {\n  // Your code here\n}`,
+      python: `def isPalindrome(s: str) -> bool:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: ['A man, a plan, a canal: Panama'], expected_output: true },
+      { input: ['race a car'], expected_output: false },
+      { input: [' '], expected_output: true },
+      { input: ['a'], expected_output: true },
+      { input: ['ab'], expected_output: false },
+    ],
+  },
+  // --- More Hash Map (Pattern 005) ---
+  {
+    id: '66666666-0001-0001-0001-000000000028',
+    title: 'Group Anagrams',
+    description: `Given an array of strings \`strs\`, group the anagrams together. You can return the answer in any order.
+
+An anagram is a word formed by rearranging the letters of another word.`,
+    difficulty: 'medium',
+    category: 'Strings',
+    pattern_id: '55555555-0001-0001-0001-000000000005',
+    constraints: ['1 <= strs.length <= 10^4', '0 <= strs[i].length <= 100', 'strs[i] consists of lowercase English letters'],
+    examples: [
+      { input: 'strs = ["eat","tea","tan","ate","nat","bat"]', output: '[["bat"],["nat","tan"],["ate","eat","tea"]]' },
+      { input: 'strs = [""]', output: '[[""]]' },
+    ],
+    starter_code: {
+      javascript: `function groupAnagrams(strs) {\n  // Your code here\n}`,
+      python: `def groupAnagrams(strs: list[str]) -> list[list[str]]:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [['eat','tea','tan','ate','nat','bat']], expected_output: [['eat','tea','ate'],['tan','nat'],['bat']] },
+      { input: [['a']], expected_output: [['a']] },
+      { input: [['']], expected_output: [['']] },
+    ],
+  },
+  // --- BS on Answer (Pattern 002) ---
+  {
+    id: '66666666-0001-0001-0001-000000000029',
+    title: 'Koko Eating Bananas',
+    description: `Koko loves to eat bananas. There are \`n\` piles of bananas, the \`ith\` pile has \`piles[i]\` bananas. Koko can decide her eating speed \`k\` (bananas/hour). Each hour, she eats \`k\` bananas from a pile. If the pile has fewer than \`k\`, she eats the whole pile and won't eat more that hour.
+
+Return the minimum integer \`k\` such that she can eat all bananas within \`h\` hours.`,
+    difficulty: 'medium',
+    category: 'Binary Search',
+    pattern_id: '55555555-0001-0001-0001-000000000002',
+    constraints: ['1 <= piles.length <= 10^4', 'piles.length <= h <= 10^9', '1 <= piles[i] <= 10^9'],
+    examples: [
+      { input: 'piles = [3,6,7,11], h = 8', output: '4' },
+      { input: 'piles = [30,11,23,4,20], h = 5', output: '30' },
+    ],
+    starter_code: {
+      javascript: `function minEatingSpeed(piles, h) {\n  // Your code here\n}`,
+      python: `def minEatingSpeed(piles: list[int], h: int) -> int:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[3,6,7,11], 8], expected_output: 4 },
+      { input: [[30,11,23,4,20], 5], expected_output: 30 },
+      { input: [[30,11,23,4,20], 6], expected_output: 23 },
+      { input: [[1], 1], expected_output: 1 },
+    ],
+  },
+  // --- More Stack (Pattern 006) ---
+  {
+    id: '66666666-0001-0001-0001-000000000030',
+    title: 'Daily Temperatures',
+    description: `Given an array of integers \`temperatures\` representing daily temperatures, return an array \`answer\` such that \`answer[i]\` is the number of days you have to wait after the \`ith\` day to get a warmer temperature. If there is no future day for which this is possible, keep \`answer[i] == 0\`.`,
+    difficulty: 'medium',
+    category: 'Stack',
+    pattern_id: '55555555-0001-0001-0001-000000000006',
+    constraints: ['1 <= temperatures.length <= 10^5', '30 <= temperatures[i] <= 100'],
+    examples: [
+      { input: 'temperatures = [73,74,75,71,69,72,76,73]', output: '[1,1,4,2,1,1,0,0]' },
+      { input: 'temperatures = [30,40,50,60]', output: '[1,1,1,0]' },
+    ],
+    starter_code: {
+      javascript: `function dailyTemperatures(temperatures) {\n  // Your code here\n}`,
+      python: `def dailyTemperatures(temperatures: list[int]) -> list[int]:\n    # Your code here\n    pass`,
+    },
+    test_cases: [
+      { input: [[73,74,75,71,69,72,76,73]], expected_output: [1,1,4,2,1,1,0,0] },
+      { input: [[30,40,50,60]], expected_output: [1,1,1,0] },
+      { input: [[30,60,90]], expected_output: [1,1,0] },
+      { input: [[90]], expected_output: [0] },
+    ],
+  },
 ];
 
 export class ProblemsService {
