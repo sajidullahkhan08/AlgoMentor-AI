@@ -58,18 +58,31 @@ async function runSystemDesignTests() {
 
   // Test Group 4: Express HTTP Endpoints
   console.log('\n--- Test Group 4: Express HTTP Endpoints ---');
+  let testServer: any;
   try {
-    const listRes = await fetch('http://localhost:3000/api/system-design/scenarios');
+    const express = (await import('express')).default;
+    const systemDesignRoutes = (await import('./routes/systemDesign')).default;
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.use('/api/system-design', systemDesignRoutes);
+
+    await new Promise<void>((resolve) => {
+      testServer = testApp.listen(0, () => resolve());
+    });
+    const port = testServer.address().port;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    const listRes = await fetch(`${baseUrl}/api/system-design/scenarios`);
     const listData = await listRes.json() as any;
     assert(listRes.status === 200, 'GET /api/system-design/scenarios returns HTTP 200');
     assert(Array.isArray(listData) && listData.length >= 3, 'Returned scenario array');
 
-    const detailRes = await fetch('http://localhost:3000/api/system-design/scenarios/url-shortener');
+    const detailRes = await fetch(`${baseUrl}/api/system-design/scenarios/url-shortener`);
     const detailData = await detailRes.json() as any;
     assert(detailRes.status === 200, 'GET /api/system-design/scenarios/:id returns HTTP 200');
     assert(detailData.slug === 'url-shortener', 'Detail payload matches requested slug');
 
-    const evalRes = await fetch('http://localhost:3000/api/system-design/evaluate', {
+    const evalRes = await fetch(`${baseUrl}/api/system-design/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -85,6 +98,10 @@ async function runSystemDesignTests() {
   } catch (err: any) {
     console.error('  Failed to call HTTP endpoint:', err.message);
     failed++;
+  } finally {
+    if (testServer) {
+      testServer.close();
+    }
   }
 
   console.log(`\n========================================`);

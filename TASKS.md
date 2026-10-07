@@ -151,11 +151,16 @@ All architectural phases (Phases 0 through 10) are implemented, integrated, and 
 
 ---
 
-# PHASE 10 — Final Polish & Verification (COMPLETE)
+# PHASE 10 — Final Polish, Curriculum Expansion & Production Readiness (COMPLETE)
 
 - [x] TypeScript compiler zero-error audit (`npx tsc --noEmit` across backend and mobile)
 - [x] Automated end-to-end test suites across all phases (117 / 117 assertions passing)
-- [x] Updated all core documentation files (`TASKS.md`, `CHANGELOG.md`, `PROJECT_MEMORY.md`, `DECISIONS.md`, `walkthrough.md`)
+- [x] Expanded problem solving catalog to 30 production problems (2–4 per pattern) across all 12 core algorithmic patterns
+- [x] Authored 90 graduated Socratic hint ladders (3 tiers per problem)
+- [x] Integrated AlgoMaster.io-inspired roadmap structure with 3 courses, 12 modules, and 28 topics
+- [x] Seeded 32 comprehensive concepts with learning objectives and prerequisite graphs
+- [x] Resolved mobile physical device connectivity (`java.net.ConnectException`) by enhancing `getApiBaseUrl()` and setting host Wi-Fi LAN IP in `mobile/.env`
+- [x] Updated all core documentation files (`TASKS.md`, `DEVELOPMENT_PLAN.md`, `CHANGELOG.md`, `PROJECT_MEMORY.md`)
 
 ---
 
@@ -168,7 +173,8 @@ None. All systems operational.
 # SESSION HANDOFF
 
 ### Last completed work
-- Completed full implementation, integration, and verification of **Phase 7 (Voice & Verbal Reasoning)**, **Phase 8 (Revision & Spaced Repetition)**, and **Phase 9 (System Design)**.
-- Maintained clean TypeScript compilation across both `backend` and `mobile`.
+- Expanded problem catalog to 30 problems with 90 Socratic hints.
+- Created AlgoMaster.io-inspired 3-tier curriculum fallback covering 28 topics and 32 concepts.
+- Fixed Android Expo physical device connection error (`ConnectException: localhost:3000`) by implementing multi-source IP resolution and setting LAN IP (`192.168.18.11:3000`) in `mobile/.env`.
 - Executed 117 automated unit and integration tests with a 100% pass rate.
-- Connected all modules into the main stack navigator (`_layout.tsx`) and Dashboard (`dashboard.tsx`).
+- Verified clean TypeScript compilation across both `backend` and `mobile`.

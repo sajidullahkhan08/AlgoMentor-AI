@@ -67,8 +67,21 @@ async function runVoiceReasoningTests() {
 
   // Test 4: HTTP Endpoint Test
   console.log('\n--- Test Group 4: Express Endpoint POST /api/tutor/voice/evaluate ---');
+  let testServer: any;
   try {
-    const res = await fetch('http://localhost:3000/api/tutor/voice/evaluate', {
+    const express = (await import('express')).default;
+    const tutorRoutes = (await import('./routes/tutor')).default;
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.use('/api/tutor', tutorRoutes);
+
+    await new Promise<void>((resolve) => {
+      testServer = testApp.listen(0, () => resolve());
+    });
+    const port = testServer.address().port;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    const res = await fetch(`${baseUrl}/api/tutor/voice/evaluate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -86,6 +99,10 @@ async function runVoiceReasoningTests() {
   } catch (err: any) {
     console.error('  Failed to call HTTP endpoint:', err.message);
     failed++;
+  } finally {
+    if (testServer) {
+      testServer.close();
+    }
   }
 
   console.log(`\n========================================`);

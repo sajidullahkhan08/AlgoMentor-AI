@@ -14,7 +14,7 @@ import Constants from 'expo-constants';
 import { supabase } from './supabase';
 
 function getApiBaseUrl(): string {
-  // If the user explicitly set an API URL in .env, honor it
+  // If the user explicitly set an API URL in .env, honor it (unless it points to localhost on a physical device)
   const envUrl = process.env.EXPO_PUBLIC_API_URL;
   if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
     return envUrl;
@@ -26,19 +26,36 @@ function getApiBaseUrl(): string {
   }
 
   // On native (Expo Go on a physical device), extract the dev machine's IP
-  // from the debuggerHost that Expo automatically sets
-  const debuggerHost =
-    Constants.expoConfig?.hostUri ?? // SDK 57+
-    (Constants as any).manifest?.debuggerHost ?? // older SDKs
+  // from Expo's host configs across different SDK versions
+  const debuggerHost: string | undefined =
+    (Constants as any).expoGoConfig?.debuggerHost ?? // Expo Go SDK 49-52+
+    Constants.expoConfig?.hostUri ?? // SDK hostUri
+    (Constants as any).manifest?.debuggerHost ?? // legacy manifest
     (Constants as any).manifest2?.extra?.expoGo?.debuggerHost;
 
   if (debuggerHost) {
-    // debuggerHost is "192.168.x.x:8081" — strip the Metro port and use backend port
+    // debuggerHost is "192.168.x.x:8081" — strip the Metro port and use backend port 3000
     const host = debuggerHost.split(':')[0];
-    return `http://${host}:3000/api`;
+    if (host && host !== 'localhost' && host !== '127.0.0.1') {
+      return `http://${host}:3000/api`;
+    }
   }
 
-  // Ultimate fallback — shouldn't happen if Expo Go is running
+  // Try extracting IP from linkingUri or experienceUrl (e.g. "exp://192.168.18.11:8081")
+  const urlToParse = Constants.linkingUri ?? (Constants as any).experienceUrl;
+  if (urlToParse && typeof urlToParse === 'string') {
+    const match = urlToParse.match(/^[a-zA-Z]+:\/\/([^:/]+)/);
+    if (match && match[1] && match[1] !== 'localhost' && match[1] !== '127.0.0.1') {
+      return `http://${match[1]}:3000/api`;
+    }
+  }
+
+  // Android emulator fallback (10.0.2.2 maps to the host machine's 127.0.0.1)
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:3000/api';
+  }
+
+  // Ultimate fallback
   return envUrl || 'http://localhost:3000/api';
 }
 

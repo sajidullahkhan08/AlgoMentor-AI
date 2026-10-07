@@ -183,11 +183,24 @@ Implement:
 
 ---
 
-# Phase 10 — Final Polish & Verification (COMPLETE)
+# Phase 10 — Final Polish, Curriculum Expansion & Production Readiness (COMPLETE)
 
 - [x] Zero TypeScript compilation errors (`npx tsc --noEmit` across backend and mobile)
-- [x] All 117 automated unit and integration tests passing across all suites
+- [x] All automated unit and integration tests passing across all suites
 - [x] Complete navigation wiring in `mobile/src/app/(main)/_layout.tsx`
 - [x] Feature launcher cards on Dashboard (`mobile/src/app/(main)/dashboard.tsx`)
+- [x] **Curriculum Expansion (AlgoMaster.io inspired)**:
+  - 3 Full Courses: DSA Fundamentals, Algorithmic Patterns, System Design Fundamentals
+  - 12 In-depth Modules and 28 Topics covering arrays, sliding window, two pointers, hashing, monotonic stacks, linked lists, binary search variants, recursion, backtracking, trees, graphs, 1D/2D DP, greedy, heaps, and distributed systems
+  - 32 Comprehensive Seed Concepts with explicit learning objectives and prerequisite graphs
+  - Resilient offline/seed fallback in Express endpoints (`/courses`, `/concepts`) ensuring instant exploration without database seeding
+- [x] **Problem Solving Catalog Expansion (30 Problems)**:
+  - Scaled catalog from 12 to 30 production problems (2–4 per pattern)
+  - 12 Algorithmic Patterns: Two Pointers, Sliding Window, Fast & Slow Pointers, Binary Search, Binary Search on Answer, Monotonic Stack, BFS, DFS, Backtracking, 1D DP, 2D DP, Greedy, Heap/Priority Queue
+  - 90 Socratic Hint Levels: 3 graduated hints per problem (Pattern Recognition → Invariant Formulation → Boundary/Optimization)
+- [x] **Physical Device (Expo Go) Networking Fix**:
+  - Resolved `java.net.ConnectException: Failed to connect to localhost/127.0.0.1:3000` on Android/iOS devices
+  - Upgraded `getApiBaseUrl()` in `mobile/src/lib/api.ts` with multi-tier discovery (`expoGoConfig.debuggerHost`, `hostUri`, `linkingUri`, `experienceUrl`, and emulator alias)
+  - Configured `mobile/.env` with host machine's Wi-Fi LAN IP (`http://192.168.18.11:3000/api`)
 - [x] Comprehensive documentation updates across all `.md` files
-- [x] Project ready for production and academic demonstration
+- [x] Project ready for production, mobile physical device testing, and academic demonstration

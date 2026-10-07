@@ -69,13 +69,29 @@ async function runSpacedRepetitionTests() {
 
   // Test Group 4: Express HTTP Endpoints
   console.log('\n--- Test Group 4: Express HTTP Endpoints ---');
+  let testServer: any;
   try {
-    const queueRes = await fetch('http://localhost:3000/api/revision/queue');
+    const express = (await import('express')).default;
+    const revisionRoutes = (await import('./routes/revision')).default;
+    const testApp = express();
+    testApp.use(express.json());
+    testApp.use('/api/revision', (req, _res, next) => {
+      (req as any).userId = testUser;
+      next();
+    }, revisionRoutes);
+
+    await new Promise<void>((resolve) => {
+      testServer = testApp.listen(0, () => resolve());
+    });
+    const port = testServer.address().port;
+    const baseUrl = `http://127.0.0.1:${port}`;
+
+    const queueRes = await fetch(`${baseUrl}/api/revision/queue`);
     const queueData = await queueRes.json() as any;
     assert(queueRes.status === 200, 'GET /api/revision/queue returns HTTP 200');
     assert(Array.isArray(queueData.dueItems), 'Response has dueItems array');
 
-    const reviewRes = await fetch('http://localhost:3000/api/revision/review', {
+    const reviewRes = await fetch(`${baseUrl}/api/revision/review`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -89,13 +105,17 @@ async function runSpacedRepetitionTests() {
     assert(reviewRes.status === 200, 'POST /api/revision/review returns HTTP 200');
     assert(typeof reviewData.newBox === 'number', 'Review response includes newBox');
 
-    const statsRes = await fetch('http://localhost:3000/api/revision/stats');
+    const statsRes = await fetch(`${baseUrl}/api/revision/stats`);
     const statsData = await statsRes.json() as any;
     assert(statsRes.status === 200, 'GET /api/revision/stats returns HTTP 200');
     assert(typeof statsData.retentionRatePercent === 'number', 'Stats includes retentionRatePercent');
   } catch (err: any) {
     console.error('  Failed to call HTTP endpoint:', err.message);
     failed++;
+  } finally {
+    if (testServer) {
+      testServer.close();
+    }
   }
 
   console.log(`\n========================================`);
