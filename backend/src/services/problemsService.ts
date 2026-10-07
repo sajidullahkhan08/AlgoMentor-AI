@@ -1665,6 +1665,115 @@ export class ProblemsService {
           content: 'This approach touches each element exactly twice (once added, once removed), giving O(n) time regardless of k. No nested loops needed.',
         },
       },
+      // ===== WAVE 2 HINTS =====
+      // --- BFS: Number of Islands ---
+      '66666666-0001-0001-0001-000000000013': {
+        1: { title: 'Hint 1: Connected Component Counting', content: 'Each island is a connected component of "1"s. Count how many distinct BFS/DFS traversals you need to visit all land cells.' },
+        2: { title: 'Hint 2: BFS from Each Unvisited Land', content: 'Iterate through every cell. When you find an unvisited "1", increment count and BFS/DFS to mark all connected "1"s as visited.' },
+        3: { title: 'Hint 3: Mark-in-Place', content: 'To avoid a separate visited array, mutate the grid: set visited cells to "0". Use a queue for BFS with 4-directional neighbors (up/down/left/right).' },
+      },
+      // --- BFS: Rotting Oranges ---
+      '66666666-0001-0001-0001-000000000014': {
+        1: { title: 'Hint 1: Multi-Source BFS', content: 'All rotten oranges spread simultaneously — this is multi-source BFS. Initialize the queue with ALL rotten orange positions at time 0.' },
+        2: { title: 'Hint 2: Track Minutes via BFS Levels', content: 'Each BFS level = 1 minute. Process all cells at the current level before incrementing the timer. Fresh oranges adjacent to rotten ones become rotten.' },
+        3: { title: 'Hint 3: Impossible Check', content: 'After BFS completes, if any fresh orange remains (grid cell still equals 1), return -1. Otherwise return the number of BFS levels processed.' },
+      },
+      // --- DFS: Max Depth of Binary Tree ---
+      '66666666-0001-0001-0001-000000000015': {
+        1: { title: 'Hint 1: Recursive Substructure', content: 'The max depth of a tree = 1 + max(depth of left subtree, depth of right subtree). This naturally maps to recursion (DFS).' },
+        2: { title: 'Hint 2: Base Case', content: 'An empty tree (null node) has depth 0. This is your recursion base case.' },
+        3: { title: 'Hint 3: One-Liner', content: 'return root === null ? 0 : 1 + Math.max(maxDepth(root.left), maxDepth(root.right))' },
+      },
+      // --- DFS: Path Sum ---
+      '66666666-0001-0001-0001-000000000016': {
+        1: { title: 'Hint 1: Reduce the Target', content: 'As you traverse from root to leaf, subtract each node\'s value from targetSum. At a leaf, check if the remaining sum equals 0.' },
+        2: { title: 'Hint 2: Leaf Node Check', content: 'A leaf has no left and no right child. Only check sum equality at leaf nodes, not at intermediate nodes.' },
+        3: { title: 'Hint 3: Recursive DFS', content: 'hasPathSum(node, remaining) = hasPathSum(node.left, remaining - node.val) || hasPathSum(node.right, remaining - node.val). Base: null → false, leaf with remaining == val → true.' },
+      },
+      // --- Backtracking: Subsets ---
+      '66666666-0001-0001-0001-000000000017': {
+        1: { title: 'Hint 1: Include/Exclude Decision', content: 'For each element, you have two choices: include it in the current subset or skip it. This creates a binary decision tree of depth n.' },
+        2: { title: 'Hint 2: Backtracking Template', content: 'Use a recursive function with parameters (index, currentSubset). At each index, try including nums[index] and recurse, then backtrack (remove it) and recurse without it.' },
+        3: { title: 'Hint 3: Base Case', content: 'When index === nums.length, add a copy of currentSubset to results. Make sure to clone the array, not push a reference.' },
+      },
+      // --- Backtracking: Permutations ---
+      '66666666-0001-0001-0001-000000000018': {
+        1: { title: 'Hint 1: Available Pool', content: 'At each position, choose from elements not yet used. Track used elements with a boolean array or by swapping.' },
+        2: { title: 'Hint 2: Swap-Based Approach', content: 'Swap the current index with each index from current to end, recurse on current+1, then swap back. This generates all permutations without extra space for tracking.' },
+        3: { title: 'Hint 3: Base Case', content: 'When current index equals the array length, a complete permutation is formed. Push a copy of the array to results.' },
+      },
+      // --- DP 2D: Unique Paths ---
+      '66666666-0001-0001-0001-000000000019': {
+        1: { title: 'Hint 1: Grid DP', content: 'dp[i][j] = number of ways to reach cell (i,j). The robot can only come from above or from the left.' },
+        2: { title: 'Hint 2: Recurrence', content: 'dp[i][j] = dp[i-1][j] + dp[i][j-1]. Initialize entire first row and first column to 1 (only one way to reach any cell in row 0 or column 0).' },
+        3: { title: 'Hint 3: Space Optimization', content: 'You only need the previous row to compute the current row, so you can reduce space from O(m*n) to O(n) using a 1D array.' },
+      },
+      // --- DP 2D: Longest Common Subsequence ---
+      '66666666-0001-0001-0001-000000000020': {
+        1: { title: 'Hint 1: 2D Table', content: 'Build a (m+1) x (n+1) table where dp[i][j] = LCS length of text1[0..i-1] and text2[0..j-1].' },
+        2: { title: 'Hint 2: Recurrence', content: 'If text1[i-1] == text2[j-1]: dp[i][j] = dp[i-1][j-1] + 1. Otherwise: dp[i][j] = max(dp[i-1][j], dp[i][j-1]).' },
+        3: { title: 'Hint 3: Base Case', content: 'dp[0][j] = 0 and dp[i][0] = 0 for all i, j (empty string has LCS of 0 with anything). Answer is dp[m][n].' },
+      },
+      // --- Greedy: Jump Game ---
+      '66666666-0001-0001-0001-000000000021': {
+        1: { title: 'Hint 1: Track Maximum Reach', content: 'Maintain a variable `maxReach` representing the farthest index you can reach. Update it as you iterate.' },
+        2: { title: 'Hint 2: Greedy Scan', content: 'For each index i (0 to n-1): if i > maxReach, you\'re stuck → return false. Otherwise, update maxReach = max(maxReach, i + nums[i]).' },
+        3: { title: 'Hint 3: Early Exit', content: 'If maxReach >= n-1 at any point, return true immediately. This gives O(n) time, O(1) space.' },
+      },
+      // --- Greedy: Non-overlapping Intervals ---
+      '66666666-0001-0001-0001-000000000022': {
+        1: { title: 'Hint 1: Activity Selection', content: 'This is the classic interval scheduling / activity selection problem. Sort by end time and greedily keep non-overlapping intervals.' },
+        2: { title: 'Hint 2: Sort by End Time', content: 'Sort intervals by their end time. For each interval, if it starts before the previous kept interval ends, it overlaps → remove it (increment count).' },
+        3: { title: 'Hint 3: Count Removals', content: 'Total removals = intervals.length - (max non-overlapping intervals kept). This is equivalent to n minus the activity selection count.' },
+      },
+      // --- Linked List: Reverse Linked List ---
+      '66666666-0001-0001-0001-000000000023': {
+        1: { title: 'Hint 1: Three Pointers', content: 'Use three pointers: prev (starts null), curr (starts at head), next (temp). In each step, reverse curr\'s pointer to prev.' },
+        2: { title: 'Hint 2: Iterative Steps', content: 'Save next = curr.next. Set curr.next = prev. Advance prev = curr, curr = next. Continue until curr is null.' },
+        3: { title: 'Hint 3: Return prev', content: 'When curr becomes null, prev points to the new head (the old tail). Return prev. O(n) time, O(1) space.' },
+      },
+      // --- Linked List: Cycle Detection ---
+      '66666666-0001-0001-0001-000000000024': {
+        1: { title: 'Hint 1: Floyd\'s Tortoise and Hare', content: 'Use two pointers: slow moves 1 step, fast moves 2 steps. If there\'s a cycle, they will eventually meet inside the cycle.' },
+        2: { title: 'Hint 2: Termination Condition', content: 'If fast reaches null (or fast.next is null), there is no cycle → return false. If slow === fast, a cycle exists → return true.' },
+        3: { title: 'Hint 3: Why It Works', content: 'In a cycle of length C, the relative speed difference is 1 step/iteration, so fast catches slow within C iterations. O(n) time, O(1) space.' },
+      },
+      // --- Heap: Kth Largest Element ---
+      '66666666-0001-0001-0001-000000000025': {
+        1: { title: 'Hint 1: Min-Heap of Size K', content: 'Maintain a min-heap of size k. The top of the heap is always the kth largest element seen so far.' },
+        2: { title: 'Hint 2: Process All Elements', content: 'For each element: push it to the heap. If heap size exceeds k, pop the minimum. After processing all elements, the heap top is the answer.' },
+        3: { title: 'Hint 3: Alternative: Quickselect', content: 'For O(n) average time, use the Quickselect algorithm (partition like QuickSort but only recurse into the relevant half). Heap approach is O(n log k).' },
+      },
+      // --- Heap: Top K Frequent Elements ---
+      '66666666-0001-0001-0001-000000000026': {
+        1: { title: 'Hint 1: Count Frequencies First', content: 'Use a hash map to count the frequency of each element. Then find the k elements with the highest frequencies.' },
+        2: { title: 'Hint 2: Min-Heap of Size K', content: 'Push (frequency, element) pairs into a min-heap of size k. If heap size exceeds k, pop the minimum frequency. Remaining k elements are the answer.' },
+        3: { title: 'Hint 3: Bucket Sort Alternative', content: 'Create an array of buckets where index = frequency. Place elements into their frequency bucket. Iterate from highest frequency bucket and collect k elements. O(n) time.' },
+      },
+      // --- Two Pointers: Valid Palindrome ---
+      '66666666-0001-0001-0001-000000000027': {
+        1: { title: 'Hint 1: Two Pointers Inward', content: 'Place a left pointer at the start and right pointer at the end. Move them inward, comparing characters.' },
+        2: { title: 'Hint 2: Skip Non-Alphanumeric', content: 'Skip characters that are not letters or digits. Use isalnum() or regex to check. Compare in lowercase.' },
+        3: { title: 'Hint 3: Mismatch = Not Palindrome', content: 'If at any point the characters at left and right don\'t match (after lowercasing), return false. If pointers cross, return true.' },
+      },
+      // --- Hash Map: Group Anagrams ---
+      '66666666-0001-0001-0001-000000000028': {
+        1: { title: 'Hint 1: Canonical Key', content: 'Two strings are anagrams if they have the same sorted characters. Use the sorted string as a hash map key.' },
+        2: { title: 'Hint 2: Group by Key', content: 'Create a map: sorted_string → list of original strings. Iterate through all strings, sort each, and append to its group.' },
+        3: { title: 'Hint 3: Character Count Key', content: 'Alternative to sorting: use a character frequency count as the key (e.g., "a1b2c1") for O(n*k) instead of O(n*k*log k).' },
+      },
+      // --- BS on Answer: Koko Eating Bananas ---
+      '66666666-0001-0001-0001-000000000029': {
+        1: { title: 'Hint 1: Binary Search on the Answer', content: 'The answer k (eating speed) is between 1 and max(piles). Binary search on k: for a given speed, can Koko finish in h hours?' },
+        2: { title: 'Hint 2: Feasibility Check', content: 'For speed k, hours needed = sum of ceil(pile/k) for each pile. If total hours <= h, k is feasible. Search for the minimum feasible k.' },
+        3: { title: 'Hint 3: Binary Search Boundaries', content: 'lo = 1, hi = max(piles). If canFinish(mid), search left (hi = mid). Otherwise search right (lo = mid + 1). Return lo.' },
+      },
+      // --- Stack: Daily Temperatures ---
+      '66666666-0001-0001-0001-000000000030': {
+        1: { title: 'Hint 1: Monotonic Stack', content: 'Use a stack that stores indices of temperatures in decreasing order. When you find a warmer day, pop and calculate the difference.' },
+        2: { title: 'Hint 2: Process Right to Left or Left to Right', content: 'Iterate left to right. For each temperature, pop all stack indices where temp[stack.top] < current temp. The difference in indices is the answer for each popped index.' },
+        3: { title: 'Hint 3: Stack Invariant', content: 'The stack always contains indices of temperatures in decreasing order. Each index is pushed and popped at most once → O(n) total time.' },
+      },
     };
 
     const problemHints = hintsByProblem[problemId] || {
