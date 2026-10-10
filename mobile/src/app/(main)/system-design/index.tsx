@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { fetchSystemDesignScenarios, SystemDesignScenario } from '../../../lib/api';
+import { BottomNavBar } from '@/components/BottomNavBar';
 
 export default function SystemDesignIndexScreen() {
   const router = useRouter();
@@ -130,6 +131,7 @@ export default function SystemDesignIndexScreen() {
           );
         })}
       </ScrollView>
+      <BottomNavBar activeTab="studio" />
     </View>
   );
 }

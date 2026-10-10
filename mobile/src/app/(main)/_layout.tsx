@@ -16,7 +16,7 @@ export default function MainLayout() {
     >
       <Stack.Screen
         name="dashboard"
-        options={{ title: 'AlgoMentor', headerBackVisible: false }}
+        options={{ headerShown: false }}
       />
       <Stack.Screen
         name="course/[id]"

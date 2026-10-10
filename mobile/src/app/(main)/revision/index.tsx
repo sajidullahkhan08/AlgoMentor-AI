@@ -25,6 +25,7 @@ import {
   RevisionItem,
   RevisionStats,
 } from '../../../lib/api';
+import { BottomNavBar } from '@/components/BottomNavBar';
 
 export default function RevisionIndexScreen() {
   const router = useRouter();
@@ -270,6 +271,7 @@ export default function RevisionIndexScreen() {
           </>
         )}
       </ScrollView>
+      <BottomNavBar activeTab="revision" />
     </View>
   );
 }

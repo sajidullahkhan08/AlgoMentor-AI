@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
+import { BottomNavBar } from '@/components/BottomNavBar';
 
 interface VisualizerCardItem {
   id: string;
@@ -146,6 +147,7 @@ export default function VisualizersIndexScreen() {
           ))}
         </View>
       </ScrollView>
+      <BottomNavBar activeTab="visualizers" />
     </View>
   );
 }

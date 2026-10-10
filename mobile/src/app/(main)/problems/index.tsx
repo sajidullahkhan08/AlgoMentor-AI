@@ -17,6 +17,7 @@ import {
   Problem,
   Pattern,
 } from '../../../lib/api';
+import { BottomNavBar } from '@/components/BottomNavBar';
 
 export default function ProblemsScreen() {
   const [problems, setProblems] = useState<Problem[]>([]);
@@ -356,6 +357,7 @@ export default function ProblemsScreen() {
           )}
         />
       )}
+      <BottomNavBar activeTab="problems" />
     </View>
   );
 }
