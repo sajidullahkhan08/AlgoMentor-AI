@@ -33,61 +33,98 @@ export function VoiceReasoningModal({
   const [transcript, setTranscript] = useState('');
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [reviewResult, setReviewResult] = useState<SpokenReasoningReview | null>(null);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  const transcriptBaseRef = useRef('');
 
-  // Initialize Web Speech API if in web browser
+  // Live microphone capture is a web-only capability (Web Speech API).
+  // Native builds use the editable transcript with keyboard dictation.
   useEffect(() => {
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const SpeechRecognition =
-        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
+    if (Platform.OS !== 'web' || typeof window === 'undefined') return;
 
-        recognition.onresult = (event: any) => {
-          let current = '';
-          for (let i = 0; i < event.results.length; i++) {
-            current += event.results[i][0].transcript;
-          }
-          setTranscript(current);
-        };
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
 
-        recognition.onerror = (e: any) => {
-          console.warn('[WebSpeech] Recognition error:', e);
-          setIsRecording(false);
-        };
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
 
-        recognition.onend = () => {
-          setIsRecording(false);
-        };
-
-        recognitionRef.current = recognition;
+    recognition.onresult = (event: any) => {
+      let current = '';
+      for (let i = 0; i < event.results.length; i++) {
+        current += event.results[i][0].transcript;
       }
-    }
+      setTranscript(`${transcriptBaseRef.current}${current}`.trim());
+    };
+
+    recognition.onerror = (event: any) => {
+      const code = event?.error || 'unknown';
+      if (code === 'not-allowed' || code === 'service-not-allowed') {
+        setVoiceError(
+          'Microphone access was blocked. Allow microphone permission in your browser and try again.'
+        );
+      } else if (code === 'no-speech') {
+        setVoiceError('No speech was detected. Try again or type your reasoning below.');
+      } else if (code === 'network') {
+        setVoiceError('Speech recognition needs a network connection. You can type your answer instead.');
+      } else {
+        setVoiceError(`Speech recognition stopped (${code}). You can type your answer instead.`);
+      }
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = recognition;
+    setSpeechSupported(true);
+
+    return () => {
+      recognition.onresult = null;
+      recognition.onerror = null;
+      recognition.onend = null;
+      try {
+        recognition.stop();
+      } catch {
+        // Recognition may already be stopped.
+      }
+      recognitionRef.current = null;
+    };
   }, []);
 
   const handleToggleRecording = () => {
     if (isRecording) {
-      // Stop recording
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (_) {}
+      try {
+        recognitionRef.current?.stop();
+      } catch {
+        // Recognition may already be stopped.
       }
       setIsRecording(false);
-    } else {
-      // Start recording
-      setReviewResult(null);
-      setIsRecording(true);
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.start();
-        } catch (err) {
-          console.warn('[WebSpeech] Start error:', err);
-        }
-      }
+      return;
+    }
+
+    if (!speechSupported || !recognitionRef.current) {
+      setVoiceError('Live speech recognition is unavailable in this environment.');
+      return;
+    }
+
+    setReviewResult(null);
+    setVoiceError(null);
+    transcriptBaseRef.current = transcript.trim() ? `${transcript.trim()} ` : '';
+    setIsRecording(true);
+    try {
+      recognitionRef.current.start();
+    } catch (err: any) {
+      setIsRecording(false);
+      setVoiceError(
+        'Could not start microphone capture. Check browser permissions or type your reasoning below.'
+      );
+      console.warn('[WebSpeech] Start error:', err);
     }
   };
 
@@ -101,6 +138,7 @@ export function VoiceReasoningModal({
 
     try {
       setIsEvaluating(true);
+      setSubmitError(null);
       const result = await evaluateVoiceReasoning(promptText, transcript, topicOrProblem);
       setReviewResult(result);
       if (onSubmitted) {
@@ -108,6 +146,9 @@ export function VoiceReasoningModal({
       }
     } catch (err: any) {
       console.error('[VoiceReasoning] Evaluation failed:', err);
+      setSubmitError(
+        err.message || 'Could not evaluate your reasoning. Check your connection and try again.'
+      );
     } finally {
       setIsEvaluating(false);
     }
@@ -116,7 +157,14 @@ export function VoiceReasoningModal({
   const handleReset = () => {
     setTranscript('');
     setReviewResult(null);
+    setSubmitError(null);
+    setVoiceError(null);
     setIsRecording(false);
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      // Recognition may already be stopped.
+    }
   };
 
   return (
@@ -142,22 +190,37 @@ export function VoiceReasoningModal({
             </View>
 
             {/* Microphone Interaction Box */}
-            <View style={styles.micSection}>
-              <TouchableOpacity
-                style={[styles.micButton, isRecording && styles.micButtonRecording]}
-                onPress={handleToggleRecording}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.micIcon}>{isRecording ? '⏹' : '🎙️'}</Text>
-              </TouchableOpacity>
-              <Text style={styles.micStatusText}>
-                {isRecording
-                  ? 'Listening... Speak your reasoning clearly.'
-                  : transcript
-                  ? 'Recording paused. Review or edit transcript below.'
-                  : 'Tap microphone to start speaking.'}
-              </Text>
-            </View>
+            {speechSupported ? (
+              <View style={styles.micSection}>
+                <TouchableOpacity
+                  style={[styles.micButton, isRecording && styles.micButtonRecording]}
+                  onPress={handleToggleRecording}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.micIcon}>{isRecording ? '⏹' : '🎙️'}</Text>
+                </TouchableOpacity>
+                <Text style={styles.micStatusText}>
+                  {isRecording
+                    ? 'Listening... Speak your reasoning clearly.'
+                    : transcript
+                    ? 'Recording paused. Review or edit transcript below.'
+                    : 'Tap microphone to start speaking.'}
+                </Text>
+                {voiceError && <Text style={styles.inlineError}>{voiceError}</Text>}
+              </View>
+            ) : (
+              <View style={styles.voiceUnavailableCard}>
+                <Text style={styles.voiceUnavailableTitle}>
+                  🎙️ Speak with keyboard dictation
+                </Text>
+                <Text style={styles.voiceUnavailableText}>
+                  {Platform.OS === 'web'
+                    ? "Live speech recognition isn't supported in this browser. Type your reasoning below, or use your browser's dictation feature."
+                    : "Live microphone capture is available in the web app. On this device, use your keyboard's dictation button, or type your reasoning below."}
+                </Text>
+                {voiceError && <Text style={styles.inlineError}>{voiceError}</Text>}
+              </View>
+            )}
 
             {/* Editable Transcript Area */}
             <View style={styles.transcriptContainer}>
@@ -199,6 +262,8 @@ export function VoiceReasoningModal({
                 )}
               </TouchableOpacity>
             </View>
+
+            {submitError && <Text style={styles.inlineError}>{submitError}</Text>}
 
             {/* Socratic Spoken Review Results */}
             {reviewResult && (
@@ -369,6 +434,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94a3b8',
     textAlign: 'center',
+  },
+  voiceUnavailableCard: {
+    backgroundColor: '#0f172a',
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#334155',
+    gap: 6,
+  },
+  voiceUnavailableTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#e2e8f0',
+  },
+  voiceUnavailableText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    lineHeight: 18,
+  },
+  inlineError: {
+    fontSize: 12,
+    color: '#f87171',
+    lineHeight: 18,
   },
   transcriptContainer: {
     gap: 6,

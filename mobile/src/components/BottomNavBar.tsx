@@ -14,7 +14,7 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export type NavTabId = 'roadmap' | 'problems' | 'visualizers' | 'revision' | 'studio';
@@ -27,7 +27,7 @@ interface NavItem {
   id: NavTabId;
   label: string;
   icon: string;
-  route: string;
+  route: Href;
   badge?: string;
 }
 
@@ -42,26 +42,26 @@ const NAV_ITEMS: NavItem[] = [
     id: 'problems',
     label: 'Practice',
     icon: '⚡',
-    route: '/(main)/problems/index',
+    route: '/(main)/problems',
     badge: '30',
   },
   {
     id: 'visualizers',
     label: 'Visualizer',
     icon: '🌲',
-    route: '/(main)/visualizers/index',
+    route: '/(main)/visualizers',
   },
   {
     id: 'revision',
     label: 'Revision',
     icon: '🔁',
-    route: '/(main)/revision/index',
+    route: '/(main)/revision',
   },
   {
     id: 'studio',
     label: 'Design',
     icon: '🏛️',
-    route: '/(main)/system-design/index',
+    route: '/(main)/system-design',
   },
 ];
 
@@ -71,7 +71,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({ activeTab }) => {
 
   const handleTabPress = (item: NavItem) => {
     if (item.id === activeTab) return;
-    router.push(item.route as any);
+    router.push(item.route);
   };
 
   return (

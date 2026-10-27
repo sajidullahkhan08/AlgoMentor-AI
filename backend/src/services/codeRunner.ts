@@ -1,15 +1,17 @@
 /**
  * Sandboxed Code Execution Service.
  *
- * Implements safe, isolated execution for student algorithm submissions.
  * Resolves DEC-DEF-01 per SECURITY.md §7:
- * - Runs in an isolated Node.js vm context
- * - Strict execution timeouts (prevents infinite loops)
- * - Prohibits access to process, require, network, or filesystem
- * - Supports JavaScript test execution with deep output comparison
+ * - Submitted JavaScript runs in a separate, resource-capped Node.js process
+ * - The worker has no access to process, require, network, or filesystem APIs
+ * - Every function invocation is bounded by a vm timeout, and the parent
+ *   enforces a hard wall-clock timeout by killing the worker
+ * - Only JavaScript is executable; every other language is rejected loudly
+ *   instead of being silently marked as passing
  */
 
-import vm from 'node:vm';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
 
 export interface TestCase {
   input: any;
@@ -27,26 +29,56 @@ export interface TestCaseResult {
   executionTimeMs: number;
 }
 
+export type CodeExecutionErrorType =
+  | 'unsupported_language'
+  | 'invalid_input'
+  | 'no_function'
+  | 'execution_error'
+  | 'timeout'
+  | 'worker_error';
+
 export interface CodeExecutionSummary {
   success: boolean;
   passed: number;
   total: number;
   testResults: TestCaseResult[];
   error?: string;
+  errorType?: CodeExecutionErrorType;
 }
 
-function areEqual(a: any, b: any): boolean {
-  if (a === b) return true;
-  try {
-    return JSON.stringify(a) === JSON.stringify(b);
-  } catch {
-    return false;
+const SUPPORTED_LANGUAGES = new Set(['javascript', 'js']);
+const WORKER_PATH = path.resolve(__dirname, '..', '..', 'codeRunnerWorker.cjs');
+const MAX_CODE_LENGTH = 50_000;
+const MAX_OUTPUT_BYTES = 1_000_000;
+
+export class UnsupportedLanguageError extends Error {
+  constructor(language: string) {
+    super(`Language "${language}" is not supported. Only JavaScript can be executed.`);
+    this.name = 'UnsupportedLanguageError';
   }
+}
+
+function normalizeTestResults(raw: unknown, total: number): TestCaseResult[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item) => item && typeof item === 'object')
+    .map((item: any, index) => ({
+      testIndex: Number.isInteger(item.testIndex) ? item.testIndex : index,
+      passed: item.passed === true,
+      input: item.input,
+      expected: item.expected,
+      actual: item.actual,
+      error: typeof item.error === 'string' ? item.error.slice(0, 500) : undefined,
+      executionTimeMs:
+        typeof item.executionTimeMs === 'number' ? item.executionTimeMs : 0,
+    }))
+    .slice(0, total);
 }
 
 export class CodeRunnerService {
   /**
-   * Run a student's code against a suite of test cases.
+   * Run a student's JavaScript against a suite of test cases in an isolated
+   * child process.
    */
   async runTests(
     code: string,
@@ -54,139 +86,188 @@ export class CodeRunnerService {
     testCases: TestCase[],
     timeoutMs: number = 1000
   ): Promise<CodeExecutionSummary> {
-    if (language.toLowerCase() !== 'javascript' && language.toLowerCase() !== 'js') {
-      // For languages other than JS, we provide structured fallback evaluation
-      return {
-        success: true,
-        passed: testCases.length,
-        total: testCases.length,
-        testResults: testCases.map((tc, idx) => ({
-          testIndex: idx,
-          passed: true,
-          input: tc.input,
-          expected: tc.expected_output,
-          actual: tc.expected_output,
-          executionTimeMs: 1,
-        })),
-      };
+    const normalizedLanguage = (language || 'javascript').toLowerCase();
+    if (!SUPPORTED_LANGUAGES.has(normalizedLanguage)) {
+      throw new UnsupportedLanguageError(language);
     }
 
-    const testResults: TestCaseResult[] = [];
-    let passedCount = 0;
-
-    // Sandbox without process, fs, or network
-    const sandbox: Record<string, any> = {
-      Math,
-      Number,
-      String,
-      Array,
-      Object,
-      Boolean,
-      JSON,
-      parseInt,
-      parseFloat,
-      isNaN,
-      isFinite,
-      console: {
-        log: () => {},
-        warn: () => {},
-        error: () => {},
-      },
-    };
-
-    const initialKeys = new Set(Object.keys(sandbox));
-    const context = vm.createContext(sandbox);
-
-    // 1. Evaluate code in sandbox and extract primary function
-    let targetFunctionName = '';
-
-    // Strategy A: Regex match function declaration or arrow function assignment
-    const fnMatch =
-      code.match(/function\s+([a-zA-Z0-9_$]+)/) ||
-      code.match(/(?:const|let|var)\s+([a-zA-Z0-9_$]+)\s*=\s*(?:function|\([^)]*\)\s*=>)/);
-
-    if (fnMatch && fnMatch[1]) {
-      targetFunctionName = fnMatch[1];
-    }
-
-    try {
-      vm.runInContext(code, context, { timeout: timeoutMs });
-    } catch (compileErr: any) {
+    if (typeof code !== 'string' || code.trim().length === 0) {
       return {
         success: false,
         passed: 0,
         total: testCases.length,
         testResults: [],
-        error: `Syntax or Evaluation Error: ${compileErr.message}`,
+        error: 'Submitted code is empty.',
+        errorType: 'invalid_input',
       };
     }
 
-    // Strategy B: If regex didn't find it or context[targetFunctionName] isn't a function, inspect newly added keys
-    if (!targetFunctionName || typeof context[targetFunctionName] !== 'function') {
-      const addedKeys = Object.keys(context).filter(
-        (k) => !initialKeys.has(k) && typeof context[k] === 'function'
+    if (code.length > MAX_CODE_LENGTH) {
+      return {
+        success: false,
+        passed: 0,
+        total: testCases.length,
+        testResults: [],
+        error: `Submitted code exceeds the ${MAX_CODE_LENGTH} character limit.`,
+        errorType: 'invalid_input',
+      };
+    }
+
+    if (!Array.isArray(testCases) || testCases.length === 0) {
+      return {
+        success: false,
+        passed: 0,
+        total: 0,
+        testResults: [],
+        error: 'No test cases are available for this problem.',
+        errorType: 'invalid_input',
+      };
+    }
+
+    const perTestTimeout = Math.min(Math.max(timeoutMs, 100), 5000);
+    const hardTimeoutMs = Math.min(
+      perTestTimeout * testCases.length + 3000,
+      30_000
+    );
+
+    const payload = JSON.stringify({
+      code,
+      testCases,
+      timeoutMs: perTestTimeout,
+    });
+
+    return new Promise<CodeExecutionSummary>((resolve) => {
+      let stdout = '';
+      let stderr = '';
+      let settled = false;
+      let killedByTimeout = false;
+      let hardTimer: NodeJS.Timeout | undefined;
+
+      const child = spawn(
+        process.execPath,
+        ['--max-old-space-size=128', '--no-warnings', WORKER_PATH],
+        {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          windowsHide: true,
+          env: {
+            NODE_ENV: 'production',
+            ...(process.env.SystemRoot ? { SystemRoot: process.env.SystemRoot } : {}),
+            ...(process.env.TEMP ? { TEMP: process.env.TEMP } : {}),
+          },
+        }
       );
-      if (addedKeys.length > 0) {
-        targetFunctionName = addedKeys[0];
-      } else {
-        const candidates = ['search', 'searchMatrix', 'findMin', 'solution'];
-        const matched = candidates.find((c) => typeof context[c] === 'function');
-        if (matched) {
-          targetFunctionName = matched;
-        } else {
-          return {
+
+      const finish = (summary: CodeExecutionSummary) => {
+        if (settled) return;
+        settled = true;
+        if (hardTimer) clearTimeout(hardTimer);
+        resolve(summary);
+      };
+
+      hardTimer = setTimeout(() => {
+        killedByTimeout = true;
+        child.kill('SIGKILL');
+      }, hardTimeoutMs);
+
+      child.stdout.on('data', (chunk: Buffer) => {
+        if (stdout.length < MAX_OUTPUT_BYTES) stdout += chunk.toString('utf8');
+      });
+
+      child.stderr.on('data', (chunk: Buffer) => {
+        if (stderr.length < 20_000) stderr += chunk.toString('utf8');
+      });
+
+      child.on('error', (err) => {
+        console.error('[CodeRunner] Failed to spawn worker:', err.message);
+        finish({
+          success: false,
+          passed: 0,
+          total: testCases.length,
+          testResults: [],
+          error: 'Code execution is temporarily unavailable.',
+          errorType: 'worker_error',
+        });
+      });
+
+      child.on('close', (exitCode) => {
+        if (killedByTimeout) {
+          finish({
             success: false,
             passed: 0,
             total: testCases.length,
             testResults: [],
-            error: 'No executable function found in submitted code.',
-          };
+            error: `Execution exceeded the ${hardTimeoutMs}ms hard limit and was terminated.`,
+            errorType: 'timeout',
+          });
+          return;
         }
-      }
-    }
 
-    // 2. Execute each test case
-    for (let i = 0; i < testCases.length; i++) {
-      const tc = testCases[i];
-      const start = Date.now();
-      try {
-        const fn = context[targetFunctionName];
-        const args = Array.isArray(tc.input) ? tc.input : [tc.input];
+        if (stdout.length >= MAX_OUTPUT_BYTES) {
+          finish({
+            success: false,
+            passed: 0,
+            total: testCases.length,
+            testResults: [],
+            error: 'Execution produced too much output.',
+            errorType: 'execution_error',
+          });
+          return;
+        }
 
-        // Clone inputs so student code mutations don't corrupt subsequent runs
-        const clonedArgs = JSON.parse(JSON.stringify(args));
-        const actualOutput = fn.apply(null, clonedArgs);
-        const executionTimeMs = Math.max(1, Date.now() - start);
+        let parsed: any;
+        try {
+          parsed = JSON.parse(stdout);
+        } catch {
+          console.error(
+            '[CodeRunner] Worker exited without valid output. Code:',
+            exitCode,
+            'stderr:',
+            stderr.slice(0, 2000)
+          );
+          finish({
+            success: false,
+            passed: 0,
+            total: testCases.length,
+            testResults: [],
+            error: 'Code execution failed unexpectedly.',
+            errorType: 'worker_error',
+          });
+          return;
+        }
 
-        const passed = areEqual(actualOutput, tc.expected_output);
-        if (passed) passedCount++;
+        if (parsed.error && !Array.isArray(parsed.testResults)) {
+          finish({
+            success: false,
+            passed: 0,
+            total: testCases.length,
+            testResults: [],
+            error: String(parsed.error).slice(0, 500),
+            errorType: parsed.errorType || 'execution_error',
+          });
+          return;
+        }
 
-        testResults.push({
-          testIndex: i,
+        const testResults = normalizeTestResults(parsed.testResults, testCases.length);
+        const passed =
+          typeof parsed.passed === 'number'
+            ? parsed.passed
+            : testResults.filter((result) => result.passed).length;
+
+        finish({
+          success: passed === testCases.length && testResults.length === testCases.length,
           passed,
-          input: tc.input,
-          expected: tc.expected_output,
-          actual: actualOutput,
-          executionTimeMs,
+          total: testCases.length,
+          testResults,
         });
-      } catch (runErr: any) {
-        testResults.push({
-          testIndex: i,
-          passed: false,
-          input: tc.input,
-          expected: tc.expected_output,
-          error: runErr.message || 'Execution error or timeout',
-          executionTimeMs: Math.max(1, Date.now() - start),
-        });
-      }
-    }
+      });
 
-    return {
-      success: passedCount === testCases.length,
-      passed: passedCount,
-      total: testCases.length,
-      testResults,
-    };
+      child.stdin.on('error', () => {
+        // The worker may exit before consuming stdin; the close handler
+        // reports the failure with a sanitized message.
+      });
+
+      child.stdin.end(payload);
+    });
   }
 }
 

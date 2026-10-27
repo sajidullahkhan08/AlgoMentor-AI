@@ -109,36 +109,46 @@ Test:
 
 # 10. Automated Verification Test Suite Inventory
 
-The project features a comprehensive suite of **117 automated unit and integration assertions** executing in Node.js via `ts-node`:
+The project features **159 automated assertions across nine suites**, executed with `tsx` through `npm test`:
 
 | Test Suite File | Scope / Focus | Assertion Count | Status |
 |---|---|---|---|
 | `backend/src/test_adaptive_tutoring.ts` | Multi-select, ordering, prerequisite descent/ascent, confidence calibration | 21 / 21 | **PASS** |
-| `backend/src/test_problem_solving.ts` | Sandboxed Node.js VM context, timeout enforcement, test-case runner, AI complexity review | 18 / 18 | **PASS** |
+| `backend/src/test_problem_solving.ts` | Test-case runner, sandbox behavior, AI complexity review | 18 / 18 | **PASS** |
 | `backend/src/test_interactive_visualizers.ts` | BST traversals, Graph BFS/DFS, Two-Pointer window, DP Matrix, Big-O scales | 17 / 17 | **PASS** |
 | `backend/src/test_voice_reasoning.ts` | Spoken reasoning evaluation, transcript validation, edge cases, delivery feedback | 15 / 15 | **PASS** |
 | `backend/src/test_spaced_repetition.ts` | SuperMemo SM-2 interval expansion, Ease Factor penalties, 5-box Leitner transitions | 25 / 25 | **PASS** |
 | `backend/src/test_system_design.ts` | Scale scenarios, back-of-the-envelope math, architecture topology, trade-off evaluation | 21 / 21 | **PASS** |
-| **Total** | **Full System Verification** | **117 / 117** | **100% PASS** |
+| `backend/src/test_code_execution_security.ts` | Valid/wrong output, syntax errors, per-test and top-level timeouts, blocked globals/eval, input limits, non-JS rejection | 11 / 11 | **PASS** |
+| `backend/src/test_api_security.ts` | Bearer-token enforcement, rate-limit budget/isolation/headers, 413/400/generic 500 without leaks | 10 / 10 | **PASS** |
+| `backend/src/test_progress_persistence.ts` | Durable attempts/revision/misconceptions, cross-process persistence, progress totals, streaks, recommendations | 21 / 21 | **PASS** |
+| **Total** | **Full System Verification** | **159 / 159** | **100% PASS** |
 
 ### Running the Test Suites
 
 Execute from the `backend/` directory:
 
 ```bash
-npx ts-node src/test_adaptive_tutoring.ts
-npx ts-node src/test_problem_solving.ts
-npx ts-node src/test_interactive_visualizers.ts
-npx ts-node src/test_voice_reasoning.ts
-npx ts-node src/test_spaced_repetition.ts
-npx ts-node src/test_system_design.ts
+npm test
 ```
+
+Individual suites can be run with `npx tsx src/test_<name>.ts`. Tests use the deterministic mock AI provider when `GEMINI_API_KEY` is empty and fall back to a local JSON store when Supabase is unreachable, so the suite requires no live credentials. The persistence and revision suites point `LOCAL_STORE_PATH` at a unique OS temp file, so repeated local runs start from a clean state and are deterministic.
 
 ### Static Type Checking
 
 Verify zero compilation errors across the workspace:
 
 ```bash
-cd backend && npx tsc --noEmit
-cd mobile && npx tsc --noEmit
+cd backend && npm run typecheck
+cd mobile && npm run typecheck
 ```
+
+### Continuous Integration
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the backend typecheck/tests and the mobile typecheck plus `expo export --platform web` on every push to `main` and every pull request, using placeholder Supabase credentials and no AI key.
+
+### Known Gaps
+
+- No automated React Native UI tests; screen-level workflows require manual/device verification.
+- The backend tests exercise middleware and services directly; they do not run against a live Supabase project.
+- Docker image and EAS build execution are documented but were not run in the development environment.

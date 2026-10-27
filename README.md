@@ -225,17 +225,20 @@ See `ARCHITECTURE.md` for the full technical architecture.
 
 ## 🚀 Project Status
 
-**Phases 0 through 10 — 100% Complete & Verified.**
+**Phases 0 through 11 — Complete & Verified.**
 
-All platform capabilities are fully implemented, integrated, and validated:
+All platform capabilities are implemented, integrated, and validated:
 - ✅ **Socratic AI Tutor**: Gemini 3.6 Flash + deterministic offline MockAIProvider fallback.
-- ✅ **Adaptive Knowledge Engine**: Dynamic prerequisite descent/ascent, confidence calibration, 7-level hint ladder.
-- ✅ **Problem Solving Studio**: In-browser/mobile code editor with sandboxed Node.js VM context (1,000ms wall-clock timeout) and Socratic AI code reviewer.
+- ✅ **Adaptive Knowledge Engine**: Dynamic prerequisite descent/ascent, confidence calibration, and a 7-level tutor hint ladder.
+- ✅ **Curriculum**: 3 courses, 12 modules, 17 topics, 40 concepts, and 30 prerequisite relationships, seeded idempotently from canonical source data.
+- ✅ **Problem Solving Studio**: 30 problems and 15 patterns with a code editor, isolated child-process JavaScript sandbox, per-test plus hard timeouts, 3-tier hints, and a Socratic AI code reviewer.
+- ✅ **Progress Dashboard**: Real mastery, attempt, revision, streak, weak-topic, and recent-activity metrics derived from learner data (no hardcoded values).
 - ✅ **Interactive Mental Models**: BST traversals, Graph BFS/DFS, Two-Pointer sliding window, DP Matrix, and Big-O asymptotic comparator.
-- ✅ **Verbal Reasoning Studio**: Free-first hybrid voice evaluation (Web Speech API / native dictation + Socratic delivery tips).
+- ✅ **Verbal Reasoning Studio**: Web Speech API transcription with editable transcripts on web, keyboard dictation/text fallback on native, plus Socratic delivery feedback.
 - ✅ **Revision & Spaced Repetition**: SuperMemo SM-2 algorithm with 5-box Leitner categorization and active retrieval flashcards.
-- ✅ **System Design Learning Track**: Production scale scenarios (URL Shortener, Chat, Rate Limiter) with interactive component topology builder and trade-off consultant.
-- ✅ **Verification**: Zero TypeScript compilation errors and **117 / 117 automated unit and integration tests passing**.
+- ✅ **System Design Learning Track**: Production scale scenarios (URL Shortener, Chat, Rate Limiter) with an interactive component topology builder and trade-off consultant.
+- ✅ **Production Hardening**: Authenticated protected routes, per-user/IP rate limits, CORS allowlist, security headers, request-body caps, sanitized errors, and durable local fallbacks when optional migrations are absent.
+- ✅ **Verification**: Zero TypeScript compilation errors and **159 / 159 automated unit and integration assertions passing**. CI, Docker, EAS, and deployment guidance are included (see [`DEPLOYMENT.md`](DEPLOYMENT.md)).
 
 ---
 
@@ -264,6 +267,7 @@ AI/developer documentation is maintained inside the repository:
 | `DECISIONS.md` | Important decisions |
 | `TASKS.md` | Active task board |
 | `CHANGELOG.md` | Project history |
+| `DEPLOYMENT.md` | Supabase, backend Docker, EAS, CORS, and CI setup |
 
 ---
 

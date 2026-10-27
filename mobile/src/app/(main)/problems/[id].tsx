@@ -93,8 +93,8 @@ export default function ProblemWorkspaceScreen() {
   const handleRequestHint = async () => {
     if (!id) return;
     const nextLevel = hintLevel + 1;
-    if (nextLevel > 5) {
-      Alert.alert('Maximum Hints', 'You have unlocked all 5 graduated hints.');
+    if (nextLevel > 3) {
+      Alert.alert('Maximum Hints', 'You have unlocked all 3 graduated hints.');
       return;
     }
 
@@ -340,11 +340,11 @@ export default function ProblemWorkspaceScreen() {
             {/* Graduated Hints Section */}
             <View style={styles.hintSection}>
               <View style={styles.hintHeader}>
-                <Text style={styles.hintTitle}>Socratic Hint Ladder ({hintLevel}/5)</Text>
+                <Text style={styles.hintTitle}>Socratic Hint Ladder ({hintLevel}/3)</Text>
                 <TouchableOpacity
                   style={[styles.hintReqBtn, loadingHint && styles.btnDisabled]}
                   onPress={handleRequestHint}
-                  disabled={loadingHint || hintLevel >= 5}
+                  disabled={loadingHint || hintLevel >= 3}
                 >
                   {loadingHint ? (
                     <ActivityIndicator size="small" color="#38bdf8" />

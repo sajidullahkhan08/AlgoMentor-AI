@@ -11,6 +11,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { AuthenticatedRequest } from '../middleware/authenticate';
+import { aiLimiter, practiceLimiter } from '../middleware/rateLimit';
 import { tutorEngine } from '../services/tutorEngine';
 
 const router = Router();
@@ -22,7 +23,7 @@ const startSessionSchema = z.object({
 
 const submitResponseSchema = z.object({
   interactionId: z.string().uuid('Invalid interaction ID'),
-  answer: z.string().min(1, 'Answer cannot be empty'),
+  answer: z.string().min(1, 'Answer cannot be empty').max(4_000, 'Answer is too long'),
   confidence: z
     .enum(['confident', 'somewhat_confident', 'unsure', 'dont_know'])
     .optional(),
@@ -36,26 +37,25 @@ const requestHintSchema = z.object({
  * POST /api/tutor/session
  * Start a new tutoring session or resume an active one for a concept.
  */
-router.post('/session', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  try {
-    const parsed = startSessionSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.issues[0].message });
-      return;
-    }
+router.post(
+  '/session',
+  aiLimiter,
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const parsed = startSessionSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(400).json({ error: parsed.error.issues[0].message });
+        return;
+      }
 
-    const userId = req.userId;
-    if (!userId) {
-      res.status(401).json({ error: 'Authentication required' });
-      return;
+      const result = await tutorEngine.startOrResumeSession(req.userId!, parsed.data.conceptId);
+      res.json(result);
+    } catch (err: any) {
+      console.error('[TutorRoute] Error starting session:', err);
+      res.status(500).json({ error: 'Failed to start session' });
     }
-    const result = await tutorEngine.startOrResumeSession(userId, parsed.data.conceptId);
-    res.json(result);
-  } catch (err: any) {
-    console.error('[TutorRoute] Error starting session:', err);
-    res.status(500).json({ error: err.message || 'Failed to start session' });
   }
-});
+);
 
 /**
  * GET /api/tutor/session/:id
@@ -63,17 +63,12 @@ router.post('/session', async (req: AuthenticatedRequest, res: Response): Promis
  */
 router.get('/session/:id', async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
-    const userId = req.userId;
-    if (!userId) {
-      res.status(401).json({ error: 'Authentication required' });
-      return;
-    }
     const sessionId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
-    const result = await tutorEngine.getSessionDetails(userId, sessionId);
+    const result = await tutorEngine.getSessionDetails(req.userId!, sessionId);
     res.json(result);
   } catch (err: any) {
     console.error('[TutorRoute] Error getting session:', err);
-    res.status(500).json({ error: err.message || 'Failed to get session' });
+    res.status(500).json({ error: 'Failed to get session' });
   }
 });
 
@@ -83,6 +78,7 @@ router.get('/session/:id', async (req: AuthenticatedRequest, res: Response): Pro
  */
 router.post(
   '/session/:id/respond',
+  aiLimiter,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const parsed = submitResponseSchema.safeParse(req.body);
@@ -91,15 +87,10 @@ router.post(
         return;
       }
 
-      const userId = req.userId;
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
       const sessionId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
       const { interactionId, answer, confidence } = parsed.data;
 
-      const result = await tutorEngine.submitResponse(userId, sessionId, interactionId, {
+      const result = await tutorEngine.submitResponse(req.userId!, sessionId, interactionId, {
         answer,
         confidence,
       });
@@ -107,7 +98,7 @@ router.post(
       res.json(result);
     } catch (err: any) {
       console.error('[TutorRoute] Error submitting response:', err);
-      res.status(500).json({ error: err.message || 'Failed to submit response' });
+      res.status(500).json({ error: 'Failed to submit response' });
     }
   }
 );
@@ -118,6 +109,7 @@ router.post(
  */
 router.post(
   '/session/:id/hint',
+  practiceLimiter,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const parsed = requestHintSchema.safeParse(req.body);
@@ -126,19 +118,14 @@ router.post(
         return;
       }
 
-      const userId = req.userId;
-      if (!userId) {
-        res.status(401).json({ error: 'Authentication required' });
-        return;
-      }
       const sessionId = Array.isArray(req.params.id) ? req.params.id[0] : (req.params.id as string);
       const { interactionId } = parsed.data;
 
-      const hint = await tutorEngine.requestHint(userId, sessionId, interactionId);
+      const hint = await tutorEngine.requestHint(req.userId!, sessionId, interactionId);
       res.json(hint);
     } catch (err: any) {
       console.error('[TutorRoute] Error generating hint:', err);
-      res.status(500).json({ error: err.message || 'Failed to generate hint' });
+      res.status(500).json({ error: 'Failed to generate hint' });
     }
   }
 );
@@ -146,9 +133,15 @@ router.post(
 import { getAIProvider } from '../services/ai';
 
 const evaluateVoiceSchema = z.object({
-  prompt: z.string().min(1, 'Prompt is required'),
-  transcript: z.string().min(1, 'Transcript is required'),
-  topicOrProblem: z.string().min(1, 'Topic or problem name is required'),
+  prompt: z.string().min(1, 'Prompt is required').max(2_000, 'Prompt is too long'),
+  transcript: z
+    .string()
+    .min(1, 'Transcript is required')
+    .max(20_000, 'Transcript exceeds the 20,000 character limit'),
+  topicOrProblem: z
+    .string()
+    .min(1, 'Topic or problem name is required')
+    .max(200, 'Topic or problem name is too long'),
 });
 
 /**
@@ -157,6 +150,7 @@ const evaluateVoiceSchema = z.object({
  */
 router.post(
   '/voice/evaluate',
+  aiLimiter,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const parsed = evaluateVoiceSchema.safeParse(req.body);
@@ -171,7 +165,7 @@ router.post(
       res.json(review);
     } catch (err: any) {
       console.error('[TutorRoute] Error evaluating voice reasoning:', err);
-      res.status(500).json({ error: err.message || 'Failed to evaluate voice reasoning' });
+      res.status(500).json({ error: 'Failed to evaluate voice reasoning' });
     }
   }
 );

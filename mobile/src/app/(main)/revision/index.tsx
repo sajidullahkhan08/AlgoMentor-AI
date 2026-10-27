@@ -103,14 +103,14 @@ export default function RevisionIndexScreen() {
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Retention</Text>
               <Text style={styles.statValue}>
-                {stats?.retentionRatePercent ?? 85}%
+                {stats?.retentionRatePercent ?? 0}%
               </Text>
             </View>
             <View style={styles.divider} />
             <View style={styles.statCol}>
               <Text style={styles.statLabel}>Review Streak</Text>
               <Text style={[styles.statValue, { color: '#f59e0b' }]}>
-                🔥 {stats?.currentStreakDays ?? 3}d
+                🔥 {stats?.currentStreakDays ?? 0}d
               </Text>
             </View>
             <View style={styles.divider} />

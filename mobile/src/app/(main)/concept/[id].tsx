@@ -20,7 +20,12 @@ import {
   Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { fetchConcept, fetchPrerequisites, startTutorSession } from '@/lib/api';
+import {
+  fetchConcept,
+  fetchConceptProgress,
+  fetchPrerequisites,
+  startTutorSession,
+} from '@/lib/api';
 
 interface ConceptDetail {
   id: string;
@@ -37,11 +42,14 @@ interface Prerequisite {
   difficulty?: string;
 }
 
+type ConceptProgress = Awaited<ReturnType<typeof fetchConceptProgress>>;
+
 export default function ConceptDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const [concept, setConcept] = useState<ConceptDetail | null>(null);
   const [prerequisites, setPrerequisites] = useState<Prerequisite[]>([]);
+  const [progress, setProgress] = useState<ConceptProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [startingSession, setStartingSession] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,12 +64,14 @@ export default function ConceptDetailScreen() {
     try {
       setLoading(true);
       setError(null);
-      const [conceptData, prereqData] = await Promise.all([
+      const [conceptData, prereqData, progressData] = await Promise.all([
         fetchConcept(conceptId),
         fetchPrerequisites(conceptId),
+        fetchConceptProgress(conceptId).catch(() => null),
       ]);
       setConcept(conceptData);
       setPrerequisites(prereqData.prerequisites || []);
+      setProgress(progressData);
     } catch (err: any) {
       setError(err.message || 'Failed to load concept');
     } finally {
@@ -197,30 +207,70 @@ export default function ConceptDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>📋 Prerequisites</Text>
             <View style={styles.prereqList}>
-              {prerequisites.map((prereq) => (
-                <View key={prereq.id} style={styles.prereqItem}>
-                  <Text style={styles.prereqName}>{prereq.name}</Text>
-                  <Text
-                    style={[
-                      styles.prereqDifficulty,
-                      { color: getDifficultyColor(prereq.difficulty || 'beginner') },
-                    ]}
-                  >
-                    {prereq.difficulty || prereq.relationship_type}
-                  </Text>
-                </View>
-              ))}
+              {prerequisites.map((prereq) => {
+                const prereqProgress = progress?.prerequisites?.find((p) => p.id === prereq.id);
+                return (
+                  <View key={prereq.id} style={styles.prereqItem}>
+                    <Text style={styles.prereqName}>{prereq.name}</Text>
+                    <Text
+                      style={[
+                        styles.prereqDifficulty,
+                        {
+                          color: prereqProgress?.isMastered
+                            ? '#34D399'
+                            : getDifficultyColor(prereq.difficulty || 'beginner'),
+                        },
+                      ]}
+                    >
+                      {prereqProgress
+                        ? prereqProgress.isMastered
+                          ? '✓ mastered'
+                          : `${prereqProgress.masteryState} • ${prereqProgress.evidenceScore}%`
+                        : prereq.difficulty || prereq.relationship_type}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           </View>
         )}
 
-        {/* Knowledge state placeholder */}
+        {/* Live knowledge state from student_knowledge */}
         <View style={styles.stateCard}>
           <Text style={styles.stateLabel}>Your Mastery</Text>
-          <Text style={styles.stateValue}>UNKNOWN</Text>
+          <Text style={styles.stateValue}>{progress?.masteryState || 'UNKNOWN'}</Text>
+          <View style={styles.evidenceTrack}>
+            <View
+              style={[
+                styles.evidenceFill,
+                { width: `${Math.min(100, Math.max(0, progress?.evidenceScore || 0))}%` },
+              ]}
+            />
+          </View>
           <Text style={styles.stateHint}>
-            Start a tutoring session to begin building understanding
+            {progress?.recommendation === 'review'
+              ? 'Mastered — revisit periodically to keep retrieval strong.'
+              : progress?.recommendation === 'advance'
+                ? 'Strong evidence — keep going and try a harder problem.'
+                : progress?.recommendation === 'practice'
+                  ? 'Keep practicing: answer the tutor’s prompts with reasoning.'
+                  : 'Start a tutoring session to begin building understanding.'}
           </Text>
+          {progress && (
+            <View style={styles.stateStats}>
+              <Text style={styles.stateStatText}>{progress.evidenceScore}% evidence</Text>
+              <Text style={styles.stateStatDot}>•</Text>
+              <Text style={styles.stateStatText}>
+                {progress.completedSessions}/{progress.sessionsCount} sessions done
+              </Text>
+              {progress.activeSessionId && (
+                <>
+                  <Text style={styles.stateStatDot}>•</Text>
+                  <Text style={styles.stateStatActive}>session active</Text>
+                </>
+              )}
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -235,7 +285,9 @@ export default function ConceptDetailScreen() {
           {startingSession ? (
             <ActivityIndicator size="small" color="#FFFFFF" />
           ) : (
-            <Text style={styles.startButtonText}>🧠 Start Learning</Text>
+            <Text style={styles.startButtonText}>
+              {progress?.activeSessionId ? '▶ Resume Learning' : '🧠 Start Learning'}
+            </Text>
           )}
         </TouchableOpacity>
       </View>
@@ -390,6 +442,41 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
     textAlign: 'center',
     marginTop: 4,
+  },
+  evidenceTrack: {
+    width: '100%',
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#1E293B',
+    overflow: 'hidden',
+    marginTop: 6,
+  },
+  evidenceFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#6366F1',
+  },
+  stateStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  stateStatText: {
+    fontSize: 11,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  stateStatDot: {
+    fontSize: 11,
+    color: '#334155',
+  },
+  stateStatActive: {
+    fontSize: 11,
+    color: '#34D399',
+    fontWeight: '700',
   },
   footer: {
     position: 'absolute',

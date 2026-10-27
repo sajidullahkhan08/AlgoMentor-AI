@@ -121,6 +121,111 @@ export async function fetchPrerequisites(conceptId: string) {
   return apiRequest<{ prerequisites: any[] }>(`/concepts/${conceptId}/prerequisites`);
 }
 
+// --- Progress API ---
+
+export interface ProgressSummary {
+  overview: {
+    totalConcepts: number;
+    conceptsTracked: number;
+    conceptsMastered: number;
+    conceptsInProgress: number;
+    masteryPercent: number;
+    avgEvidencePercent: number;
+    totalProblems: number;
+    problemsAttempted: number;
+    problemsSolved: number;
+    totalPatterns: number;
+    dueReviews: number;
+    retentionRatePercent: number;
+    currentStreakDays: number;
+    activeSessions: number;
+    misconceptionCount: number;
+  };
+  continueLearning: Array<{
+    conceptId: string;
+    name: string;
+    courseTitle: string;
+    sessionId: string | null;
+    startedAt: string | null;
+    masteryState: string;
+    recommended: boolean;
+    reason: string;
+  }>;
+  weakTopics: Array<{
+    conceptId: string;
+    name: string;
+    courseTitle: string;
+    masteryState: string;
+    evidenceScore: number;
+    lastAssessed: string | null;
+    reason: string;
+  }>;
+  recentActivity: Array<{
+    type: 'tutoring' | 'problem' | 'revision';
+    title: string;
+    detail: string;
+    status?: string;
+    timestamp: string;
+  }>;
+  courseProgress: Array<{
+    courseId: string;
+    title: string;
+    difficulty: string;
+    totalConcepts: number;
+    trackedConcepts: number;
+    masteredConcepts: number;
+    inProgressConcepts: number;
+    masteryPercent: number;
+  }>;
+  revision: {
+    totalItems: number;
+    dueTodayCount: number;
+    masteredCount: number;
+    boxDistribution: Record<string, number>;
+    retentionRatePercent: number;
+    nextDueAt: string | null;
+  };
+  misconceptions: Array<{
+    tag: string;
+    description: string;
+    last_detected_at: string;
+    occurrences: number;
+  }>;
+  generatedAt: string;
+}
+
+export async function fetchProgressSummary() {
+  return apiRequest<ProgressSummary>('/progress/summary');
+}
+
+export async function fetchConceptProgress(conceptId: string) {
+  return apiRequest<{
+    conceptId: string;
+    name: string;
+    courseTitle: string;
+    moduleTitle: string;
+    topicTitle: string;
+    masteryState: string;
+    evidenceScore: number;
+    confidence: number | null;
+    lastAssessed: string | null;
+    nextReview: string | null;
+    sessionsCount: number;
+    completedSessions: number;
+    activeSessionId: string | null;
+    lastSessionAt: string | null;
+    prerequisites: Array<{
+      id: string;
+      name: string;
+      difficulty: string;
+      masteryState: string;
+      evidenceScore: number;
+      isMastered: boolean;
+    }>;
+    recommendation: 'start' | 'practice' | 'advance' | 'review';
+  }>(`/progress/concepts/${conceptId}`);
+}
+
 // --- Profile API ---
 
 export async function fetchProfile() {

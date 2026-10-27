@@ -275,7 +275,7 @@ See `AI_TUTOR_ENGINE.md` §8 for the canonical hint ladder definition.
 
 # 10. System Design
 
-System Design is a planned learning track.
+System Design is an implemented learning track with three production-scale scenarios (URL Shortener, Real-Time Chat, Rate Limiter), back-of-the-envelope estimation, a component builder, and Socratic trade-off evaluation.
 
 Example progression:
 

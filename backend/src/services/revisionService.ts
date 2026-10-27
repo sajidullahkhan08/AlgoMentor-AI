@@ -9,6 +9,12 @@
  */
 
 import { getSupabase } from '../config/supabase';
+import {
+  addRevisionLog,
+  getRevisionItems,
+  listRevisionLogs,
+  saveRevisionItems,
+} from './localStore';
 
 export interface RevisionItem {
   id: string;
@@ -123,9 +129,6 @@ const SEED_REVISION_ITEMS: Omit<RevisionItem, 'user_id'>[] = [
 ];
 
 export class RevisionService {
-  // In-memory fallback per user
-  private memoryStore: Map<string, RevisionItem[]> = new Map();
-
   /**
    * Calculate SM-2 spaced repetition parameters.
    */
@@ -179,49 +182,48 @@ export class RevisionService {
     };
   }
 
-  private getUserItems(userId: string): RevisionItem[] {
+  /**
+   * Read items from Supabase when the revision tables exist; otherwise use the
+   * durable local store. Local copies are kept in sync so a later outage does
+   * not lose progress.
+   */
+  private async getUserItems(userId: string): Promise<RevisionItem[]> {
     const key = userId || 'default';
-    if (!this.memoryStore.has(key)) {
-      const seeded = SEED_REVISION_ITEMS.map((item) => ({
-        ...item,
-        user_id: key,
-      }));
-      this.memoryStore.set(key, seeded);
+
+    try {
+      const { data, error } = await getSupabase()
+        .from('revision_items')
+        .select('*')
+        .eq('user_id', key)
+        .order('next_review_date', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const items = data as RevisionItem[];
+        saveRevisionItems(key, items);
+        return items;
+      }
+    } catch {
+      // Fall through to the local store
     }
-    return this.memoryStore.get(key)!;
+
+    const stored = getRevisionItems(key);
+    if (stored && stored.length > 0) {
+      return stored as RevisionItem[];
+    }
+
+    const seeded = SEED_REVISION_ITEMS.map((item) => ({
+      ...item,
+      user_id: key,
+    }));
+    saveRevisionItems(key, seeded);
+    return seeded;
   }
 
   /**
    * Get all items due for review (or upcoming).
    */
   async getDueQueue(userId: string): Promise<{ dueItems: RevisionItem[]; upcomingItems: RevisionItem[] }> {
-    try {
-      const supabase = getSupabase();
-      const { data, error } = await supabase
-        .from('revision_items')
-        .select('*')
-        .eq('user_id', userId)
-        .order('next_review_date', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        const now = new Date();
-        const dueItems: RevisionItem[] = [];
-        const upcomingItems: RevisionItem[] = [];
-
-        for (const item of data) {
-          if (new Date(item.next_review_date) <= now) {
-            dueItems.push(item);
-          } else {
-            upcomingItems.push(item);
-          }
-        }
-        return { dueItems, upcomingItems };
-      }
-    } catch {
-      // Fallback to in-memory store
-    }
-
-    const items = this.getUserItems(userId);
+    const items = await this.getUserItems(userId);
     const now = new Date();
     const dueItems = items.filter((i) => new Date(i.next_review_date) <= now);
     const upcomingItems = items.filter((i) => new Date(i.next_review_date) > now);
@@ -239,7 +241,7 @@ export class RevisionService {
     confidence?: string,
     timeSpentSeconds: number = 0
   ): Promise<RevisionReviewResult> {
-    const items = this.getUserItems(userId);
+    const items = await this.getUserItems(userId);
     let target = items.find((i) => i.id === itemId);
 
     if (!target) {
@@ -247,7 +249,13 @@ export class RevisionService {
       target = items[0];
     }
 
+    if (!target) {
+      throw new Error('No revision items available');
+    }
+
     const previousBox = target.leitner_box;
+    const previousInterval = target.interval_days;
+    const previousEF = target.easiness_factor;
     const sm2 = this.calculateSM2(
       rating,
       target.repetition_count,
@@ -265,7 +273,18 @@ export class RevisionService {
     target.next_review_date = nextReview;
     target.last_reviewed_at = new Date().toISOString();
 
-    // Persist to Supabase asynchronously if possible
+    // Always persist locally first so progress never depends on optional tables.
+    saveRevisionItems(userId, items);
+    addRevisionLog({
+      user_id: userId,
+      item_id: target.id,
+      item_title: target.title,
+      rating,
+      confidence: confidence || 'normal',
+      time_spent_seconds: timeSpentSeconds,
+    });
+
+    // Mirror to Supabase when the revision tables exist.
     try {
       const supabase = getSupabase();
       await supabase
@@ -279,21 +298,22 @@ export class RevisionService {
           last_reviewed_at: target.last_reviewed_at,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', target.id);
+        .eq('id', target.id)
+        .eq('user_id', userId);
 
       await supabase.from('revision_logs').insert({
         revision_item_id: target.id,
         user_id: userId,
         rating,
-        previous_interval: target.interval_days,
+        previous_interval: previousInterval,
         new_interval: sm2.intervalDays,
-        previous_ef: target.easiness_factor,
+        previous_ef: previousEF,
         new_ef: sm2.easinessFactor,
         confidence: confidence || 'normal',
         time_spent_seconds: timeSpentSeconds,
       });
     } catch {
-      // In-memory update already complete
+      // Local persistence already complete
     }
 
     let message = '';
@@ -322,7 +342,7 @@ export class RevisionService {
    * Get overall Leitner and retention statistics.
    */
   async getStats(userId: string): Promise<RevisionStats> {
-    const items = this.getUserItems(userId);
+    const items = await this.getUserItems(userId);
     const now = new Date();
 
     const boxDistribution: { [box: number]: number } = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -354,13 +374,27 @@ export class RevisionService {
           )
         : 100;
 
+    const reviewDays = new Set(
+      listRevisionLogs(userId).map((log) => log.created_at.slice(0, 10))
+    );
+    let streak = 0;
+    const cursor = new Date();
+    // Allow the streak to remain active if today's review has not happened yet.
+    if (!reviewDays.has(cursor.toISOString().slice(0, 10))) {
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+    while (reviewDays.has(cursor.toISOString().slice(0, 10))) {
+      streak++;
+      cursor.setUTCDate(cursor.getUTCDate() - 1);
+    }
+
     return {
       totalItems,
       dueTodayCount,
       masteredCount,
       boxDistribution,
       retentionRatePercent: weightedRetention,
-      currentStreakDays: 3, // Initial healthy momentum
+      currentStreakDays: streak,
     };
   }
 }

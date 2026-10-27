@@ -28,7 +28,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/lib/auth';
-import { fetchCourses } from '@/lib/api';
+import { fetchCourses, fetchProgressSummary, ProgressSummary } from '@/lib/api';
 import { BottomNavBar } from '@/components/BottomNavBar';
 
 interface Course {
@@ -46,31 +46,60 @@ export default function DashboardScreen() {
   const insets = useSafeAreaInsets();
 
   const [courses, setCourses] = useState<Course[]>([]);
+  const [progress, setProgress] = useState<ProgressSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('all');
 
-  const loadCourses = async () => {
-    try {
-      setError(null);
-      const data = await fetchCourses();
-      setCourses(data.courses || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load courses');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+  const loadDashboard = async () => {
+    setError(null);
+    const [courseResult, progressResult] = await Promise.allSettled([
+      fetchCourses(),
+      fetchProgressSummary(),
+    ]);
+
+    if (courseResult.status === 'fulfilled') {
+      setCourses(courseResult.value.courses || []);
+    } else {
+      setError(courseResult.reason?.message || 'Failed to load courses');
     }
+
+    if (progressResult.status === 'fulfilled') {
+      setProgress(progressResult.value);
+    } else if (courseResult.status === 'fulfilled') {
+      setError(progressResult.reason?.message || 'Failed to load progress');
+    }
+
+    setLoading(false);
+    setRefreshing(false);
   };
 
   useEffect(() => {
-    loadCourses();
+    loadDashboard();
   }, []);
 
   const onRefresh = () => {
     setRefreshing(true);
-    loadCourses();
+    loadDashboard();
+  };
+
+  const overview = progress?.overview;
+  const nextUp = progress?.continueLearning?.[0];
+  const weakTopics = progress?.weakTopics || [];
+  const recentActivity = progress?.recentActivity || [];
+  const courseProgressById = new Map(
+    (progress?.courseProgress || []).map((entry) => [entry.courseId, entry])
+  );
+
+  const heroPress = () => {
+    if ((overview?.dueReviews || 0) > 0) {
+      router.push('/(main)/revision/practice');
+    } else if (nextUp) {
+      router.push(`/(main)/concept/${nextUp.conceptId}` as any);
+    } else {
+      router.push('/(main)/problems');
+    }
   };
 
   const handleSignOut = () => {
@@ -121,9 +150,14 @@ export default function DashboardScreen() {
       {/* Top App Header */}
       <View style={[styles.header, { paddingTop: Math.max(insets.top, 16) }]}>
         <View style={styles.headerLeft}>
-          <View style={styles.avatarGlow}>
+          <TouchableOpacity
+            style={styles.avatarGlow}
+            onPress={() => router.push('/(main)/profile')}
+            activeOpacity={0.8}
+            accessibilityLabel="Open profile"
+          >
             <Text style={styles.avatarText}>{userInitial}</Text>
-          </View>
+          </TouchableOpacity>
           <View>
             <View style={styles.brandRow}>
               <Text style={styles.brandName}>AlgoMentor</Text>
@@ -141,7 +175,7 @@ export default function DashboardScreen() {
           {/* Gamified Streak Pill */}
           <View style={styles.streakPill}>
             <Text style={styles.streakIcon}>🔥</Text>
-            <Text style={styles.streakText}>3d</Text>
+            <Text style={styles.streakText}>{overview?.currentStreakDays ?? 0}d</Text>
           </View>
 
           {/* Quick Sign Out Button */}
@@ -171,40 +205,151 @@ export default function DashboardScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero Mission Card — Daily Invariant Retrieval Target */}
-        <TouchableOpacity
-          style={styles.heroCard}
-          onPress={() => router.push('/(main)/revision/practice' as any)}
-          activeOpacity={0.88}
-        >
+        <TouchableOpacity style={styles.heroCard} onPress={heroPress} activeOpacity={0.88}>
           <View style={styles.heroGlowCorner} />
           <View style={styles.heroBadgeRow}>
             <View style={styles.heroPill}>
               <Text style={styles.heroPillDot}>●</Text>
-              <Text style={styles.heroPillText}>TODAY'S MISSION</Text>
+              <Text style={styles.heroPillText}>
+                {(overview?.dueReviews || 0) > 0 ? "TODAY'S RETRIEVAL" : 'CONTINUE LEARNING'}
+              </Text>
             </View>
-            <Text style={styles.heroSubStat}>Box 2 • 4 Due</Text>
+            <Text style={styles.heroSubStat}>
+              {overview?.dueReviews || 0} due • {overview?.retentionRatePercent || 0}% retention
+            </Text>
           </View>
 
-          <Text style={styles.heroTitle}>Master Algorithmic Invariants</Text>
+          <Text style={styles.heroTitle}>
+            {nextUp ? `${nextUp.recommended ? 'Start' : 'Continue'}: ${nextUp.name}` : 'Build Your Algorithmic Foundation'}
+          </Text>
           <Text style={styles.heroSubtitle}>
-            Active retrieval practice: Floyd's cycle 2x speed differential, sliding window state transitions & binary search invariants.
+            {nextUp
+              ? `${nextUp.reason}${nextUp.courseTitle ? ` — ${nextUp.courseTitle}` : ''}.`
+              : 'Track real mastery, resume active tutoring sessions, and review what is due.'}
           </Text>
 
-          {/* Progress Bar */}
+          {/* Curriculum mastery progress */}
           <View style={styles.progressContainer}>
             <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: '70%' }]} />
+              <View
+                style={[
+                  styles.progressFill,
+                  { width: `${Math.min(100, Math.max(0, overview?.masteryPercent || 0))}%` },
+                ]}
+              />
             </View>
             <View style={styles.progressMeta}>
-              <Text style={styles.progressLabel}>SM-2 Retention Score</Text>
-              <Text style={styles.progressValue}>88% Target</Text>
+              <Text style={styles.progressLabel}>Curriculum Mastery</Text>
+              <Text style={styles.progressValue}>
+                {overview?.conceptsMastered || 0}/{overview?.totalConcepts || 0} concepts
+              </Text>
             </View>
           </View>
 
           <View style={styles.heroActionRow}>
-            <Text style={styles.heroActionText}>Start Daily Retrieval Practice →</Text>
+            <Text style={styles.heroActionText}>
+              {(overview?.dueReviews || 0) > 0
+                ? `Review ${overview?.dueReviews} due item${overview?.dueReviews === 1 ? '' : 's'} →`
+                : nextUp
+                  ? 'Open Concept Studio →'
+                  : 'Browse Problems →'}
+            </Text>
           </View>
         </TouchableOpacity>
+
+        {/* Continue Learning — real active sessions / recommendations */}
+        {(progress?.continueLearning?.length || 0) > 0 && (
+          <View style={styles.sectionBlock}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Continue Learning</Text>
+              <Text style={styles.sectionCaption}>
+                {overview?.activeSessions || 0} active session
+                {(overview?.activeSessions || 0) === 1 ? '' : 's'}
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.continueRow}
+            >
+              {progress!.continueLearning.map((item) => (
+                <TouchableOpacity
+                  key={item.conceptId}
+                  style={styles.continueCard}
+                  onPress={() => router.push(`/(main)/concept/${item.conceptId}` as any)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.continueBadgeRow}>
+                    <View
+                      style={[
+                        styles.continueBadge,
+                        item.recommended && styles.continueBadgeRecommended,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.continueBadgeText,
+                          item.recommended && styles.continueBadgeTextRecommended,
+                        ]}
+                      >
+                        {item.recommended ? 'RECOMMENDED' : item.masteryState.replace(/_/g, ' ')}
+                      </Text>
+                    </View>
+                    <Text style={styles.continueArrow}>→</Text>
+                  </View>
+                  <Text style={styles.continueTitle} numberOfLines={2}>
+                    {item.name}
+                  </Text>
+                  <Text style={styles.continueCourse} numberOfLines={1}>
+                    {item.courseTitle}
+                  </Text>
+                  <Text style={styles.continueReason} numberOfLines={2}>
+                    {item.reason}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* Focus Areas — weakest concepts from real mastery evidence */}
+        {weakTopics.length > 0 && (
+          <View style={styles.focusCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Focus Areas</Text>
+              <Text style={styles.sectionCaption}>Lowest evidence first</Text>
+            </View>
+            {weakTopics.slice(0, 3).map((topic) => (
+              <TouchableOpacity
+                key={topic.conceptId}
+                style={styles.focusRow}
+                onPress={() => router.push(`/(main)/concept/${topic.conceptId}` as any)}
+                activeOpacity={0.75}
+              >
+                <View style={styles.focusInfo}>
+                  <Text style={styles.focusName} numberOfLines={1}>
+                    {topic.name}
+                  </Text>
+                  <Text style={styles.focusReason} numberOfLines={1}>
+                    {topic.reason}
+                  </Text>
+                  <View style={styles.focusTrack}>
+                    <View
+                      style={[
+                        styles.focusFill,
+                        { width: `${Math.min(100, Math.max(0, topic.evidenceScore))}%` },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <View style={styles.focusScoreWrap}>
+                  <Text style={styles.focusScore}>{topic.evidenceScore}%</Text>
+                  <Text style={styles.focusScoreLabel}>evidence</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {/* Bento Hub: 4 Core Learning Engines */}
         <View style={styles.sectionHeaderRow}>
@@ -216,7 +361,7 @@ export default function DashboardScreen() {
           {/* Bento 1: Problems & Code Runner */}
           <TouchableOpacity
             style={[styles.bentoCard, styles.bentoCardIndigo]}
-            onPress={() => router.push('/(main)/problems/index' as any)}
+            onPress={() => router.push('/(main)/problems')}
             activeOpacity={0.8}
           >
             <View style={styles.bentoTop}>
@@ -224,12 +369,14 @@ export default function DashboardScreen() {
                 <Text style={styles.bentoIcon}>⚡</Text>
               </View>
               <View style={[styles.bentoMicroBadge, { backgroundColor: 'rgba(99, 102, 241, 0.2)' }]}>
-                <Text style={[styles.bentoMicroText, { color: '#A5B4FC' }]}>30 Problems</Text>
+                <Text style={[styles.bentoMicroText, { color: '#A5B4FC' }]}>
+                  {overview?.totalProblems || 0} Problems
+                </Text>
               </View>
             </View>
             <Text style={styles.bentoTitle}>Problem Solver</Text>
             <Text style={styles.bentoDesc}>
-              12 core patterns with VM test runner & Socratic hints.
+              {overview?.totalPatterns || 0} core patterns with an isolated test runner & Socratic hints.
             </Text>
             <Text style={[styles.bentoLink, { color: '#818CF8' }]}>Solve Code →</Text>
           </TouchableOpacity>
@@ -237,7 +384,7 @@ export default function DashboardScreen() {
           {/* Bento 2: Mental Model Visualizers */}
           <TouchableOpacity
             style={[styles.bentoCard, styles.bentoCardEmerald]}
-            onPress={() => router.push('/(main)/visualizers/index' as any)}
+            onPress={() => router.push('/(main)/visualizers')}
             activeOpacity={0.8}
           >
             <View style={styles.bentoTop}>
@@ -258,7 +405,7 @@ export default function DashboardScreen() {
           {/* Bento 3: Spoken Reasoning Studio */}
           <TouchableOpacity
             style={[styles.bentoCard, styles.bentoCardViolet]}
-            onPress={() => router.push('/(main)/voice/index' as any)}
+            onPress={() => router.push('/(main)/voice')}
             activeOpacity={0.8}
           >
             <View style={styles.bentoTop}>
@@ -279,7 +426,7 @@ export default function DashboardScreen() {
           {/* Bento 4: System Design Architecture */}
           <TouchableOpacity
             style={[styles.bentoCard, styles.bentoCardCyan]}
-            onPress={() => router.push('/(main)/system-design/index' as any)}
+            onPress={() => router.push('/(main)/system-design')}
             activeOpacity={0.8}
           >
             <View style={styles.bentoTop}>
@@ -301,23 +448,23 @@ export default function DashboardScreen() {
         {/* Quick Platform Metrics Banner */}
         <View style={styles.metricsBar}>
           <View style={styles.metricItem}>
-            <Text style={styles.metricNumber}>30</Text>
+            <Text style={styles.metricNumber}>{overview?.totalProblems || 0}</Text>
             <Text style={styles.metricLabel}>Problems</Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
-            <Text style={styles.metricNumber}>12</Text>
-            <Text style={styles.metricLabel}>Patterns</Text>
+            <Text style={styles.metricNumber}>{overview?.conceptsTracked || 0}</Text>
+            <Text style={styles.metricLabel}>Concepts</Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
-            <Text style={styles.metricNumber}>90</Text>
-            <Text style={styles.metricLabel}>Socratic Hints</Text>
+            <Text style={styles.metricNumber}>{overview?.dueReviews || 0}</Text>
+            <Text style={styles.metricLabel}>Due Reviews</Text>
           </View>
           <View style={styles.metricDivider} />
           <View style={styles.metricItem}>
-            <Text style={styles.metricNumber}>5-Box</Text>
-            <Text style={styles.metricLabel}>Leitner SM-2</Text>
+            <Text style={styles.metricNumber}>{overview?.currentStreakDays || 0}d</Text>
+            <Text style={styles.metricLabel}>Day Streak</Text>
           </View>
         </View>
 
@@ -402,7 +549,7 @@ export default function DashboardScreen() {
           ) : error ? (
             <View style={styles.errorCard}>
               <Text style={styles.errorText}>{error}</Text>
-              <TouchableOpacity style={styles.retryButton} onPress={loadCourses}>
+              <TouchableOpacity style={styles.retryButton} onPress={loadDashboard}>
                 <Text style={styles.retryText}>Retry Connection</Text>
               </TouchableOpacity>
             </View>
@@ -439,6 +586,30 @@ export default function DashboardScreen() {
 
                   <Text style={styles.courseTrackDesc}>{course.description}</Text>
 
+                  {courseProgressById.get(course.id) && (
+                    <View style={styles.courseProgressWrap}>
+                      <View style={styles.courseProgressTrack}>
+                        <View
+                          style={[
+                            styles.courseProgressFill,
+                            {
+                              width: `${Math.min(
+                                100,
+                                Math.max(0, courseProgressById.get(course.id)!.masteryPercent)
+                              )}%`,
+                            },
+                          ]}
+                        />
+                      </View>
+                      <Text style={styles.courseProgressText}>
+                        {courseProgressById.get(course.id)!.masteredConcepts}/
+                        {courseProgressById.get(course.id)!.totalConcepts} concepts mastered
+                        {'  •  '}
+                        {courseProgressById.get(course.id)!.trackedConcepts} started
+                      </Text>
+                    </View>
+                  )}
+
                   <View style={styles.courseTrackFooter}>
                     <Text style={styles.courseTrackCta}>Explore Modules & Concepts →</Text>
                     <Text style={styles.courseTrackChevron}>›</Text>
@@ -449,22 +620,68 @@ export default function DashboardScreen() {
           )}
         </View>
 
+        {/* Recent Activity — tutoring, problem attempts, and revisions */}
+        {recentActivity.length > 0 && (
+          <View style={styles.activityCard}>
+            <View style={styles.sectionHeaderRow}>
+              <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <Text style={styles.sectionCaption}>Your latest practice</Text>
+            </View>
+            {recentActivity.slice(0, 5).map((item, index) => (
+              <View
+                key={`${item.type}-${item.timestamp}-${index}`}
+                style={[styles.activityRow, index > 0 && styles.activityRowBorder]}
+              >
+                <View
+                  style={[
+                    styles.activityIconBadge,
+                    item.type === 'problem'
+                      ? styles.activityIconProblem
+                      : item.type === 'revision'
+                        ? styles.activityIconRevision
+                        : styles.activityIconTutoring,
+                  ]}
+                >
+                  <Text style={styles.activityIcon}>
+                    {item.type === 'problem' ? '⚡' : item.type === 'revision' ? '🔁' : '🧠'}
+                  </Text>
+                </View>
+                <View style={styles.activityInfo}>
+                  <Text style={styles.activityTitle} numberOfLines={1}>
+                    {item.title}
+                  </Text>
+                  <Text style={styles.activityDetail} numberOfLines={1}>
+                    {item.detail}
+                  </Text>
+                </View>
+                <Text style={styles.activityDate}>
+                  {new Date(item.timestamp).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Spaced Retrieval Queue Quick Banner */}
         <TouchableOpacity
           style={styles.revisionFooterCard}
-          onPress={() => router.push('/(main)/revision/index' as any)}
+          onPress={() => router.push('/(main)/revision')}
           activeOpacity={0.8}
         >
           <View style={styles.revisionFooterLeft}>
             <Text style={styles.revisionFooterIcon}>🔁</Text>
-            <View>
+            <View style={styles.revisionFooterTextWrap}>
               <Text style={styles.revisionFooterTitle}>Spaced Repetition & Retention</Text>
               <Text style={styles.revisionFooterSub}>
-                Maintain your long-term memory with Leitner 5-box intervals
+                {overview?.dueReviews || 0} due now • {overview?.retentionRatePercent || 0}% retention
+                • Leitner 5-box intervals
               </Text>
             </View>
           </View>
-          <Text style={styles.revisionFooterAction}>Open Queue →</Text>
+          <Text style={styles.revisionFooterAction}>Open →</Text>
         </TouchableOpacity>
 
         {/* Bottom Padding for Dock */}
@@ -687,18 +904,219 @@ const styles = StyleSheet.create({
     color: '#A5B4FC',
   },
   sectionHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
     marginBottom: 12,
+    gap: 8,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: '#F8FAFC',
     letterSpacing: -0.3,
+    flexShrink: 1,
   },
   sectionCaption: {
     fontSize: 12,
     color: '#64748B',
     marginTop: 2,
+    textAlign: 'right',
+    flexShrink: 1,
+  },
+  sectionBlock: {
+    marginBottom: 24,
+  },
+  continueRow: {
+    gap: 10,
+    paddingRight: 16,
+  },
+  continueCard: {
+    width: 210,
+    backgroundColor: '#0E1322',
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#1E2B45',
+    gap: 5,
+  },
+  continueBadgeRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  continueBadge: {
+    backgroundColor: 'rgba(56, 189, 248, 0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  continueBadgeRecommended: {
+    backgroundColor: 'rgba(16, 185, 129, 0.14)',
+  },
+  continueBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#7DD3FC',
+    letterSpacing: 0.3,
+  },
+  continueBadgeTextRecommended: {
+    color: '#6EE7B7',
+  },
+  continueArrow: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '700',
+  },
+  continueTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#F8FAFC',
+    lineHeight: 18,
+  },
+  continueCourse: {
+    fontSize: 11,
+    color: '#818CF8',
+    fontWeight: '600',
+  },
+  continueReason: {
+    fontSize: 11,
+    color: '#64748B',
+    lineHeight: 15,
+  },
+  focusCard: {
+    backgroundColor: '#0E1322',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#3B2A1A',
+    marginBottom: 24,
+  },
+  focusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#1C2436',
+  },
+  focusInfo: {
+    flex: 1,
+    gap: 3,
+  },
+  focusName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#E2E8F0',
+  },
+  focusReason: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  focusTrack: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#1E293B',
+    overflow: 'hidden',
+    marginTop: 3,
+  },
+  focusFill: {
+    height: '100%',
+    borderRadius: 2,
+    backgroundColor: '#F59E0B',
+  },
+  focusScoreWrap: {
+    alignItems: 'flex-end',
+    minWidth: 48,
+  },
+  focusScore: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FBBF24',
+  },
+  focusScoreLabel: {
+    fontSize: 9,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  activityCard: {
+    backgroundColor: '#0E1322',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#1C2436',
+    marginBottom: 20,
+  },
+  activityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 10,
+  },
+  activityRowBorder: {
+    borderTopWidth: 1,
+    borderTopColor: '#172033',
+  },
+  activityIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityIconTutoring: {
+    backgroundColor: 'rgba(99, 102, 241, 0.16)',
+  },
+  activityIconProblem: {
+    backgroundColor: 'rgba(245, 158, 11, 0.14)',
+  },
+  activityIconRevision: {
+    backgroundColor: 'rgba(168, 85, 247, 0.16)',
+  },
+  activityIcon: {
+    fontSize: 14,
+  },
+  activityInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  activityTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#E2E8F0',
+  },
+  activityDetail: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  activityDate: {
+    fontSize: 10,
+    color: '#475569',
+    fontWeight: '600',
+  },
+  courseProgressWrap: {
+    gap: 5,
+    marginBottom: 12,
+  },
+  courseProgressTrack: {
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#1E293B',
+    overflow: 'hidden',
+  },
+  courseProgressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: '#6366F1',
+  },
+  courseProgressText: {
+    fontSize: 10,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  revisionFooterTextWrap: {
+    flex: 1,
   },
   bentoGrid: {
     flexDirection: 'row',

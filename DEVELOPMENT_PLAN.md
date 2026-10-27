@@ -1,12 +1,12 @@
 # DEVELOPMENT PLAN
 
-This plan is organized into phases. All phases (Phases 0 through 10) have been fully implemented, integrated, and verified with 117 automated test assertions passing.
+This plan is organized into phases. All phases (Phases 0 through 11) have been implemented, integrated, and verified with 159 automated test assertions passing.
 
 ---
 
 # Current Status
 
-**All Phases (0 through 10) — 100% Complete**
+**All Phases (0 through 11) — Complete**
 
 - **Phases 0–4**: Core Socratic Tutoring, Prerequisite Descent/Ascent, and Confidence Calibration (21/21 assertions).
 - **Phase 5**: Problem Solving & Code Execution Sandboxing (18/18 assertions).
@@ -14,7 +14,8 @@ This plan is organized into phases. All phases (Phases 0 through 10) have been f
 - **Phase 7**: Voice & Speech-to-Text Verbal Reasoning (15/15 assertions).
 - **Phase 8**: Revision & Spaced Repetition via SuperMemo SM-2 (25/25 assertions).
 - **Phase 9**: System Design Learning Track (21/21 assertions).
-- **Phase 10**: Final Polish, Zero-Error TypeScript Verification, Full Navigator Wiring (117/117 assertions total).
+- **Phase 10**: Final Polish, Zero-Error TypeScript Verification, Full Navigator Wiring (117 assertions).
+- **Phase 11**: Production Hardening, Real Progress, Durable Persistence, CI & Deployment (+42 assertions; 159 total).
 
 ---
 
@@ -65,7 +66,7 @@ Tasks:
 - [x] Concept model
 - [x] Prerequisites
 - [x] Initial DSA curriculum
-- [x] Seed data (`002_seed_data.sql`)
+- [x] Canonical curriculum source ([`backend/src/data/curriculum.ts`](backend/src/data/curriculum.ts)) and idempotent seeder (`npm run seed:curriculum`); `002_seed_data.sql` is retained as the legacy bootstrap seed
 
 Deliverable:
 
@@ -122,7 +123,7 @@ Implement:
 - [x] In-app code editor & test runner (`mobile/src/app/(main)/problems/[id].tsx`)
 - [x] Test cases with deep I/O comparison
 - [x] Socratic AI Code Reviewer analyzing sub-optimal vs optimal complexity
-- [x] Sandboxed CodeRunner execution engine (Node.js `vm.createContext`, 1000ms wall-clock timeout)
+- [x] Sandboxed CodeRunner execution engine (isolated child process, per-test VM timeout, parent hard-kill, 128 MB heap cap, JavaScript-only)
 - [x] VisualArrayTrace interactive invariant visualization
 - [x] Automated test suite (`test_problem_solving.ts` — 18/18 passing)
 
@@ -132,11 +133,11 @@ Implement:
 
 Implement:
 
-- [x] Interactive BST tree visualizer (`VisualBinaryTree.tsx`) with animated traversals
+- [x] Interactive BST tree visualizer (`VisualTreeTraversal.tsx`) with animated traversals
 - [x] Interactive Graph traversal visualizer (`VisualGraphTraversal.tsx`) with BFS radial expansion and DFS backtracking
-- [x] Interactive Two-Pointers & Sliding Window trace (`VisualTwoPointerWindow.tsx`)
+- [x] Interactive Two-Pointers & Sliding Window trace (`VisualTwoPointerSlidingWindow.tsx`)
 - [x] Dynamic Programming Matrix visualizer (`VisualDPMatrix.tsx`)
-- [x] Big-O Asymptotic Scaling & Comparator (`VisualBigOComparator.tsx`)
+- [x] Big-O Asymptotic Scaling & Comparator (`VisualComplexityComparator.tsx`)
 - [x] Mental Models & Interactive Visualizer Gallery screen (`mobile/src/app/(main)/visualizers/index.tsx` & `[type].tsx`)
 - [x] Automated test suite (`test_interactive_visualizers.ts` — 17/17 passing)
 
@@ -147,7 +148,7 @@ Implement:
 Implement:
 
 - [x] Resolve DEC-DEF-02: Hybrid Free-First Voice Architecture
-- [x] Client-side Speech Recognition (Web Speech API / native dictation)
+- [x] Client-side speech recognition (Web Speech API on web; keyboard-dictation/text fallback on native)
 - [x] Editable transcript modal (`mobile/src/components/VoiceReasoningModal.tsx`)
 - [x] Verbal Reasoning Studio screen (`mobile/src/app/(main)/voice/index.tsx`) with interview delivery prompts
 - [x] AI reasoning evaluation (`evaluateSpokenReasoning` in `GeminiProvider` and `MockAIProvider`)
@@ -190,13 +191,13 @@ Implement:
 - [x] Complete navigation wiring in `mobile/src/app/(main)/_layout.tsx`
 - [x] Feature launcher cards on Dashboard (`mobile/src/app/(main)/dashboard.tsx`)
 - [x] **Curriculum Expansion (AlgoMaster.io inspired)**:
-  - 3 Full Courses: DSA Fundamentals, Algorithmic Patterns, System Design Fundamentals
-  - 12 In-depth Modules and 28 Topics covering arrays, sliding window, two pointers, hashing, monotonic stacks, linked lists, binary search variants, recursion, backtracking, trees, graphs, 1D/2D DP, greedy, heaps, and distributed systems
-  - 32 Comprehensive Seed Concepts with explicit learning objectives and prerequisite graphs
-  - Resilient offline/seed fallback in Express endpoints (`/courses`, `/concepts`) ensuring instant exploration without database seeding
+  - 3 Courses: DSA Fundamentals, Algorithmic Patterns, System Design Fundamentals
+  - 12 Modules and 17 Topics covering arrays, sliding window, two pointers, hashing, monotonic stacks, linked lists, binary search variants, recursion, backtracking, trees, graphs, 1D/2D DP, greedy, heaps, and distributed systems
+  - 40 Concepts with explicit learning objectives and 30 prerequisite relationships
+  - Canonical seed fallback in Express endpoints (`/courses`, `/concepts`) plus an idempotent database seeder
 - [x] **Problem Solving Catalog Expansion (30 Problems)**:
-  - Scaled catalog from 12 to 30 production problems (2–4 per pattern)
-  - 12 Algorithmic Patterns: Two Pointers, Sliding Window, Fast & Slow Pointers, Binary Search, Binary Search on Answer, Monotonic Stack, BFS, DFS, Backtracking, 1D DP, 2D DP, Greedy, Heap/Priority Queue
+  - 30 production problems (2–4 per pattern)
+  - 15 Patterns: Binary Search on Sorted Array, Binary Search on Answer, Two Pointers, Sliding Window, Hash Map/Set, Stack, BFS, DFS, Backtracking, 1D DP, 2D DP, Greedy, Linked List Techniques, Heap/Priority Queue, Merge Intervals
   - 90 Socratic Hint Levels: 3 graduated hints per problem (Pattern Recognition → Invariant Formulation → Boundary/Optimization)
 - [x] **Physical Device (Expo Go) Networking Fix**:
   - Resolved `java.net.ConnectException: Failed to connect to localhost/127.0.0.1:3000` on Android/iOS devices
@@ -204,3 +205,18 @@ Implement:
   - Configured `mobile/.env` with host machine's Wi-Fi LAN IP (`http://192.168.18.11:3000/api`)
 - [x] Comprehensive documentation updates across all `.md` files
 - [x] Project ready for production, mobile physical device testing, and academic demonstration
+
+---
+
+# Phase 11 — Production Hardening, Real Progress & Deployment (COMPLETE)
+
+- [x] Unified canonical curriculum data and seeded the live Supabase project idempotently
+- [x] Implemented `GET /api/progress/summary` and `GET /api/progress/concepts/:id` from real learner signals (knowledge, sessions, attempts, revision, misconceptions, streaks)
+- [x] Wired the mobile dashboard to the progress API, replacing hardcoded metrics
+- [x] Added a durable local JSON fallback for attempts, revision state/logs, and misconceptions when optional tables are unavailable
+- [x] Hardened code execution: isolated worker process, per-test VM timeouts, parent hard-kill, heap/output caps, blocked globals and dynamic code, JavaScript-only
+- [x] Hardened the API: mandatory auth on learner routes, per-user/IP rate limits, CORS allowlist, security headers, 128 KB body cap, sanitized errors
+- [x] Fixed voice UX (support detection, native fallback, transcript preservation, inline errors) and aligned mobile/backend API contracts
+- [x] Added code-execution security, API security, and durable persistence/progress test suites (42 assertions)
+- [x] Added GitHub Actions CI, backend Docker packaging, EAS build profiles, and [`DEPLOYMENT.md`](DEPLOYMENT.md)
+- [x] Re-verified backend/mobile typechecks, nine test suites (159/159), and the Expo web export

@@ -138,7 +138,7 @@ export default function VisualizerPlaygroundScreen() {
         {/* Practice Related Problems CTA */}
         <TouchableOpacity
           style={styles.practiceBtn}
-          onPress={() => router.push('/(main)/problems/index' as any)}
+          onPress={() => router.push('/(main)/problems')}
         >
           <Text style={styles.practiceBtnText}>
             Practice LeetCode Problems With This Pattern ➔

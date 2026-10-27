@@ -249,19 +249,19 @@ Reason:
 
 # DEC-PEN-05 — Curriculum Seed Data Format
 
-Date: 2026-09-20
+Date: 2026-09-20 (amended 2026-10-24)
 
-Status: **Accepted**
+Status: **Accepted — amended**
 
 Decision:
 
-**SQL migration files (`002_seed_data.sql`)** with relational INSERT statements.
+**Canonical TypeScript curriculum source + idempotent seeder** (`backend/src/data/curriculum.ts` → `npm run seed:curriculum`), superseding the original `002_seed_data.sql` INSERT migration for new deployments.
 
 Reason:
 
-- Version-controlled in the repository.
-- Reproducible across any developer or agent environment with standard Supabase migrations.
-- Establishes referential integrity across the concept graph.
+- A single typed source of truth keeps courses, modules, topics, concepts, prerequisite edges, problems, and patterns consistent across the API services, seeds, and tests.
+- Deterministic UUID upserts make seeding repeatable and safe to run on existing projects; the seeder verifies that all 40 concepts resolve afterward.
+- `002_seed_data.sql` remains in the repository as a legacy bootstrap seed only.
 
 ---
 
@@ -292,27 +292,28 @@ These decisions are intentionally postponed. They should be resolved when their 
 
 # DEC-DEF-01 — Code Execution Environment
 
-Date: 2026-09-22
+Date: 2026-09-22 (amended 2026-10-24)
 
 Status: **Accepted**
 
 Decision:
 
-**Server-Side Sandboxed Node.js VM Context with Timeout Enforcement and Isolated Execution.**
+**Server-side isolated child-process JavaScript sandbox with VM timeout enforcement.**
 
 Reason:
 
-- Preserves the strict **Free-First (DEC-006)** constraint — eliminates dependencies on paid third-party execution APIs (e.g. Judge0 paid plans, external microservices).
-- Strict Sandboxing:
-  - Context isolation using Node.js `vm.createContext`.
-  - Global namespace is sanitized (`process`, `require`, `fs`, `fetch`, `XMLHttpRequest`, `WebSocket`, `ChildProcess`, `Buffer` are explicitly stripped/denied).
-  - Strict wall-clock execution timeout (1,000ms max per test case) guarding against infinite loops / exponential recursion.
-  - Safe memory ceiling and input/output deep JSON comparisons.
+- Preserves the strict **Free-First (DEC-006)** constraint — no paid third-party execution APIs.
+- Isolation:
+  - Untrusted code runs in a separate Node.js process (`codeRunnerWorker.cjs`), never in the Express process.
+  - The worker uses `vm.createContext` with `codeGeneration: { strings: false, wasm: false }`; `process`, `require`, `module`, `fs`, `fetch`, `XMLHttpRequest`, `WebSocket`, `ChildProcess`, and `Buffer` are unavailable.
+  - Per-test VM timeout (default 1,000 ms, clamped 100–5,000 ms); the parent enforces a hard wall-clock timeout (`tests × timeout + 3s`, max 30 s) and kills the worker.
+  - The worker runs with `--max-old-space-size=128`, a minimal environment, and capped stdout/stderr/output.
+  - Only JavaScript (`javascript` / `js`) is accepted; other languages are rejected before execution.
 - Combined with **Socratic AI Code Reviewer** (`GeminiProvider` / `MockAIProvider`):
   - Sandboxed execution validates correctness against test suites.
-  - AI Reviewer analyzes time complexity ($O(n)$ vs $O(\log n)$), space complexity, boundary invariants, and generates Socratic reflection prompts without executing code directly in the AI model.
+  - The AI reviewer analyzes time/space complexity, boundary invariants, and generates reflection prompts without executing code.
 
-Referenced in: `SECURITY.md` §7, `AI_TUTOR_ENGINE.md`, `TECH_STACK.md`.
+Referenced in: `SECURITY.md` §7, `DEPLOYMENT.md`, `AI_TUTOR_ENGINE.md`, `TECH_STACK.md`.
 
 ---
 
@@ -330,8 +331,8 @@ Reason:
 
 - Preserves the strict **Free-First (DEC-006)** constraint — eliminates third-party metered STT API costs.
 - Architecture:
-  - **Client-Side Speech Recognition**: Uses browser Web Speech API / native mobile dictation with editable live transcription.
-  - **Editable Transcript Modal**: Enables students to preview and refine transcribed technical jargon (e.g. "deque", "$O(\log n)$", "BFS") before submission.
+  - **Client-Side Speech Recognition**: Uses the browser Web Speech API on web with editable live transcription. Native builds show a keyboard-dictation/text-entry fallback because `SpeechRecognition` is not available in React Native.
+  - **Editable Transcript Modal**: Enables students to preview and refine transcribed technical jargon (e.g. "deque", "$O(\log n)$", "BFS") before submission, and preserves typed text while recording.
   - **Socratic Spoken Reasoning Evaluation**: The backend AI provider analyzes verbal stream-of-consciousness explanations for conceptual clarity, edge-case consideration, and communication fluency.
   - **Privacy Guarantee**: Audio streams are processed locally and discarded immediately. No raw voice recordings are stored in the database.
 
@@ -366,3 +367,24 @@ Reason:
 - **Calibration Integration**: Misconceptions and overconfidence triggers a steeper EF penalty, while high-confidence verified answers accelerate interval progression.
 
 Referenced in: `FEATURE_SPEC.md` §P2 Revision, `DATABASE_SPEC.md` Revision Items, `KNOWLEDGE_MODEL.md`.
+
+---
+
+# DEC-DEF-04 — Durable Fallback for Optional Persistence Tables
+
+Date: 2026-10-24
+
+Status: **Accepted**
+
+Decision:
+
+**Persist attempts, revision items/logs, and misconceptions to an atomic local JSON store when migrations 003–005 are unavailable, while preferring Supabase whenever those tables exist.**
+
+Reason:
+
+- The live project may not have optional migrations applied; silently dropping learner attempts and revision progress is unacceptable.
+- A single-process JSON file (temp write + rename) provides durable, dependency-free persistence without adding another service.
+- Supabase remains the source of truth for multi-instance deployments; the fallback explicitly documents its single-process limitation.
+- Applying migrations later does not auto-import fallback data, so deployments should apply all migrations up front.
+
+Referenced in: `SECURITY.md` §12, `DATABASE_SPEC.md` §19, `DEPLOYMENT.md` §1 and §7, `PROJECT_MEMORY.md` §12.

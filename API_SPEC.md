@@ -11,18 +11,20 @@ Base URL: `http://localhost:3000/api`
 ```text
 GET /api/health
 ```
-Response: `{ status: 'ok', timestamp: ISOString, uptime: number }`
+Response: `{ status: 'ok', service: 'algomentor-backend', timestamp: ISOString }`
 
 ---
 
 # Authentication & Profiles
 
-Supabase JWT Bearer token validated via `Authorization: Bearer <token>`.
+Supabase JWT validated via `Authorization: Bearer <token>` on all protected routes. Missing/invalid tokens return HTTP 401; there is no guest bypass.
 
 ```text
-GET /api/profile
-PUT /api/profile
+GET /api/profiles/me
+PUT /api/profiles/me
 ```
+
+`PUT` accepts `display_name`, `experience_level`, and `preferred_language`.
 
 ---
 
@@ -31,21 +33,27 @@ PUT /api/profile
 ```text
 GET /api/courses
 GET /api/courses/:id
+GET /api/courses/:courseId/modules/:moduleId/topics
 ```
-Returns course tree with populated modules, topics, concepts, and learning objectives.
+Returns course tree with populated modules, topics, concepts, and learning objectives. Canonical seed data is used as a fallback when the database is unavailable.
 
 ---
 
 # Concepts & Prerequisites
 
 ```text
+GET /api/concepts/topic/:topicId
 GET /api/concepts/:id
 GET /api/concepts/:id/prerequisites
 ```
 
+Public routes. Unknown concepts return HTTP 404.
+
 ---
 
 # AI Socratic Tutor
+
+All routes require authentication and are rate-limited (20/min for AI-heavy operations, 60/min for hints).
 
 ```text
 POST /api/tutor/session
@@ -73,14 +81,32 @@ POST /api/problems/:id/submit
 POST /api/problems/:id/hint
 ```
 
-- `GET /api/problems`: Filterable by `difficulty`, `patternId`, or `conceptId`.
-- `POST /api/problems/:id/run`: Executes code against visible test cases in isolated Node.js VM context (1,000ms wall-clock timeout).
-- `POST /api/problems/:id/submit`: Executes against full hidden test suite + invokes Socratic AI Reviewer for asymptotic analysis.
-- `POST /api/problems/:id/hint`: Progressive problem hint ladder (Conceptual → Pattern → Complexity → Edge-case).
+- `GET /api/problems`: Filterable by `difficulty`, `category`, or `patternId`. Each problem includes its associated `patterns` array (joined from `pattern_id`) so clients can show tags and filter by pattern.
+- `GET /api/problems`, `/patterns`, and `/:id` are public; detail responses also include `patterns`.
+- `POST /api/problems/:id/run`: Executes JavaScript against visible test cases in an isolated child process (per-test VM timeout, parent hard-kill, 128 MB heap cap). Supports `javascript` / `js` only; other languages return HTTP 400. Requires auth; limited to 20 executions/minute.
+- `POST /api/problems/:id/submit`: Executes against the full test suite and invokes the Socratic AI Reviewer for asymptotic analysis and edge cases. Requires auth; code-execution + AI limits apply.
+- `POST /api/problems/:id/hint`: 3-tier problem hint ladder (Pattern Recognition → Invariant Formulation → Boundary/Optimization). Requires auth; practice limit applies.
+- Run responses include canonical fields plus mobile-friendly aliases (`results`, `passedCount`, `totalCount`, `allPassed`); submit adds `runResult` and a flattened `review` summary.
+
+---
+
+# Learner Progress
+
+All routes require authentication.
+
+```text
+GET /api/progress/summary
+GET /api/progress/concepts/:conceptId
+```
+
+- `GET /api/progress/summary`: Aggregates knowledge state, active-session resume/recommendations, weak topics, recent activity, per-course progress, revision stats, misconceptions, and overview metrics (concepts mastered, problems attempted/solved, patterns, due reviews, retention, streak).
+- `GET /api/progress/concepts/:conceptId`: Per-concept mastery/evidence, sessions, prerequisite status, and recommendation (`start` | `practice` | `advance` | `review`). Unknown concepts return HTTP 404.
 
 ---
 
 # Revision & Spaced Repetition (SuperMemo SM-2)
+
+All routes require authentication.
 
 ```text
 GET  /api/revision/queue
@@ -102,18 +128,19 @@ GET  /api/system-design/scenarios/:id
 POST /api/system-design/evaluate
 ```
 
-- `GET /api/system-design/scenarios`: Returns production-scale scenarios (Distributed URL Shortener, Real-Time Chat, Distributed Rate Limiter) with scale metrics.
-- `GET /api/system-design/scenarios/:id`: Detailed scenario specification, functional/non-functional requirements, and back-of-the-envelope calculations.
-- `POST /api/system-design/evaluate`: Socratic architectural consultant evaluating component topology (Load Balancers, Services, Caches, Sharded DBs), trade-offs (CAP theorem, cache invalidation), bottlenecks, and scalability.
+- `GET /api/system-design/scenarios`: Returns production-scale scenarios (Distributed URL Shortener, Real-Time Chat, Distributed Rate Limiter) with scale metrics. Public.
+- `GET /api/system-design/scenarios/:id`: Detailed scenario specification, functional/non-functional requirements, and back-of-the-envelope calculations. Public.
+- `POST /api/system-design/evaluate`: Socratic architectural consultant evaluating component topology, trade-offs, bottlenecks, and scalability. Requires auth; AI rate limit applies.
 
 ---
 
 # API Principles
 
-- Strict input validation on all request bodies.
-- Safe authorization via Supabase JWT Bearer tokens with optional bypass for test/studio contexts.
+- Strict zod input validation and length limits on request bodies.
+- Mandatory Supabase JWT authentication on learner data and expensive operations; no guest bypass.
 - Free-first local execution (no metered paid API dependencies).
-- Unified JSON error envelopes `{ error: string, code?: string }`.
-- Deterministic fallback when external AI services are unavailable or rate-limited.
-- Avoid exposing raw internal AI prompts.
-- Rate-limit expensive AI operations.
+- Unified JSON error envelopes `{ error: string }` with appropriate status codes (400/401/404/413/429/500).
+- Deterministic fallback when external AI services are unavailable (mock provider).
+- Internal prompts, stack traces, provider errors, and database details are never returned.
+- Fixed-window rate limits: global 300/min per IP; code execution 20/min; AI 20/min; practice writes/hints 60/min. 429 responses include `Retry-After`.
+- Security headers, CORS allowlist (`CORS_ORIGINS`), and a 128 KB JSON body cap.

@@ -8,6 +8,10 @@
  */
 
 import { getSupabase } from '../config/supabase';
+import {
+  getCurriculumConcept,
+  getCurriculumPrerequisites,
+} from '../data/curriculum';
 import { getAIProvider, GeneratedQuestion, TutorContext, StudentResponse } from './ai';
 
 const MASTERY_ORDER = ['UNKNOWN', 'INTRODUCED', 'LEARNING', 'DEVELOPING', 'PROFICIENT', 'MASTERED'] as const;
@@ -26,13 +30,32 @@ export class TutorEngine {
    */
   async startOrResumeSession(userId: string, conceptId: string) {
     // 1. Fetch concept
-    const { data: concept, error: conceptError } = await this.supabase
+    const { data: dbConcept, error: conceptError } = await this.supabase
       .from('concepts')
       .select('id, name, description, difficulty, learning_objectives, topic_id')
       .eq('id', conceptId)
       .single();
 
-    if (conceptError || !concept) {
+    // Fall back to the canonical curriculum if the concept has not been
+    // seeded into this database yet (e.g. a fresh local environment).
+    const concept =
+      !conceptError && dbConcept
+        ? dbConcept
+        : (() => {
+            const seed = getCurriculumConcept(conceptId);
+            return seed
+              ? {
+                  id: seed.id,
+                  name: seed.name,
+                  description: seed.description,
+                  difficulty: seed.difficulty,
+                  learning_objectives: seed.learningObjectives,
+                  topic_id: seed.topicId,
+                }
+              : null;
+          })();
+
+    if (!concept) {
       throw new Error(`Concept not found: ${conceptError?.message || conceptId}`);
     }
 
@@ -553,21 +576,26 @@ export class TutorEngine {
    * Fetch all prerequisites for a given concept.
    */
   private async getPrerequisites(conceptId: string): Promise<Array<{ id: string; name: string }>> {
+    const canonical = getCurriculumPrerequisites(conceptId).map((c) => ({ id: c.id, name: c.name }));
+    const seen = new Set(canonical.map((c) => c.id));
+
     const { data: rels } = await this.supabase
       .from('concept_relationships')
       .select('source_concept_id')
       .eq('target_concept_id', conceptId)
       .eq('relationship_type', 'prerequisite');
 
-    if (!rels || rels.length === 0) return [];
+    if (!rels || rels.length === 0) return canonical;
 
-    const ids = rels.map((r) => r.source_concept_id);
+    const ids = rels.map((r) => r.source_concept_id).filter((id) => !seen.has(id));
+    if (ids.length === 0) return canonical;
+
     const { data: prereqs } = await this.supabase
       .from('concepts')
       .select('id, name')
       .in('id', ids);
 
-    return prereqs || [];
+    return [...canonical, ...((prereqs || []) as Array<{ id: string; name: string }>)];
   }
 
   /**
@@ -580,9 +608,12 @@ export class TutorEngine {
       .eq('target_concept_id', targetConceptId)
       .eq('relationship_type', 'prerequisite');
 
-    if (!rels || rels.length === 0) return null;
+    const canonicalIds = getCurriculumPrerequisites(targetConceptId).map((c) => c.id);
+    const prereqIds = Array.from(
+      new Set([...(rels || []).map((r) => r.source_concept_id), ...canonicalIds])
+    );
 
-    const prereqIds = rels.map((r) => r.source_concept_id);
+    if (prereqIds.length === 0) return null;
 
     // Fetch student's knowledge for all these prerequisites
     const { data: knowledgeRows } = await this.supabase
@@ -606,6 +637,17 @@ export class TutorEngine {
           .single();
         if (prereqConcept) {
           return prereqConcept;
+        }
+
+        const seed = getCurriculumConcept(prereqId);
+        if (seed) {
+          return {
+            id: seed.id,
+            name: seed.name,
+            description: seed.description,
+            difficulty: seed.difficulty,
+            learning_objectives: seed.learningObjectives,
+          };
         }
       }
     }

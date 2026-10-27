@@ -1,56 +1,45 @@
-# Welcome to your Expo app 👋
+# AlgoMentor AI — Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo SDK 57 / React Native 0.86 / Expo Router client for the AlgoMentor AI adaptive learning platform.
 
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+cd mobile
+npm install
+cp .env.example .env   # fill in Supabase URL/key and backend API URL
+npm start
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+`EXPO_PUBLIC_API_URL` must include `/api` (for example `http://192.168.1.20:3000/api`). On a physical device via Expo Go, a `localhost` API URL is ignored and the dev machine's LAN IP is auto-detected; set a real URL for builds.
 
-### Other setup steps
+## Scripts
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+| Command | Purpose |
+|---|---|
+| `npm start` | Expo dev server |
+| `npm run android` / `npm run ios` / `npm run web` | Platform-specific dev |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | Expo lint |
+| `npx expo export --platform web` | Static web bundle in `dist/` |
 
-## Learn more
+## Screens
 
-To learn more about developing your project with Expo, look at the following resources:
+- Auth (login/register) and profile
+- Dashboard with real progress metrics (`/progress/summary`)
+- Curriculum: course → topic → concept
+- Socratic tutor sessions with confidence calibration and hint ladder
+- Problems catalog, workspace, code runner, 3-tier hints, AI review
+- Mental-model visualizers
+- Verbal reasoning studio
+- Revision and spaced repetition
+- System design studio
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Packaging
 
-## Join the community
+EAS profiles live in [`eas.json`](eas.json). Production builds require `EXPO_PUBLIC_*` values to be configured as EAS environment variables and a real API URL. See the root [`DEPLOYMENT.md`](../DEPLOYMENT.md).
 
-Join our community of developers creating universal apps.
+## Notes
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- Web Speech API transcription only works in browsers; native builds show keyboard dictation/text entry.
+- The app expects the backend to be reachable and the Supabase project to have migrations 001, 003, 004, and 005 applied (see root deployment guide).

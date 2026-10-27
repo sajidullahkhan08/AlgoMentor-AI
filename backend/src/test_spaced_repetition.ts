@@ -1,6 +1,14 @@
-import { revisionService } from './services/revisionService';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
+const storePath = path.join(os.tmpdir(), `algomentor-revision-test-${process.pid}.json`);
+process.env.LOCAL_STORE_PATH = storePath;
+process.env.SUPABASE_URL = 'http://127.0.0.1:9';
+process.env.SUPABASE_ANON_KEY = 'test-anon-key';
 
 async function runSpacedRepetitionTests() {
+  const { revisionService } = await import('./services/revisionService');
   console.log('🔁 === ALGORITHMIC SPACED REPETITION & LEITNER TESTS (PHASE 8) ===\n');
 
   let passed = 0;
@@ -121,6 +129,8 @@ async function runSpacedRepetitionTests() {
   console.log(`\n========================================`);
   console.log(`Total: ${passed + failed} | Passed: ${passed} | Failed: ${failed}`);
   console.log(`========================================\n`);
+
+  fs.rmSync(storePath, { force: true });
 
   if (failed > 0) {
     process.exit(1);

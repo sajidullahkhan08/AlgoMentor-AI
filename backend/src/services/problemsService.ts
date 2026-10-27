@@ -11,6 +11,12 @@
 import { getSupabase } from '../config/supabase';
 import { getAIProvider } from './ai';
 import { codeRunner, CodeExecutionSummary } from './codeRunner';
+import {
+  addAttempt,
+  listAttempts,
+  recordMisconceptions,
+  StoredAttempt,
+} from './localStore';
 
 export interface Problem {
   id: string;
@@ -19,6 +25,7 @@ export interface Problem {
   difficulty: 'easy' | 'medium' | 'hard';
   category: string;
   pattern_id?: string;
+  patterns?: Pattern[];
   constraints: string[];
   examples: Array<{ input: string; output: string; explanation?: string }>;
   starter_code: Record<string, string>;
@@ -36,7 +43,7 @@ export interface Pattern {
 }
 
 // Built-in seed data used for fallback and immediate testing
-const SEED_PATTERNS: Pattern[] = [
+export const SEED_PATTERNS: Pattern[] = [
   {
     id: '55555555-0001-0001-0001-000000000001',
     name: 'Binary Search On Sorted Array',
@@ -309,7 +316,7 @@ const SEED_PATTERNS: Pattern[] = [
   },
 ];
 
-const SEED_PROBLEMS: Problem[] = [
+export const SEED_PROBLEMS: Problem[] = [
   {
     id: '66666666-0001-0001-0001-000000000001',
     title: 'Binary Search',
@@ -1305,6 +1312,14 @@ export class ProblemsService {
     return getAIProvider();
   }
 
+  private withPatterns(problems: Problem[], patterns: Pattern[]): Problem[] {
+    const byId = new Map(patterns.map((p) => [p.id, p]));
+    return problems.map((problem) => {
+      const pattern = problem.pattern_id ? byId.get(problem.pattern_id) : undefined;
+      return { ...problem, patterns: pattern ? [pattern] : [] };
+    });
+  }
+
   /**
    * List problems with optional filtering.
    */
@@ -1321,25 +1336,28 @@ export class ProblemsService {
 
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        return data as Problem[];
+        return this.withPatterns(data as Problem[], await this.getPatterns());
       }
     } catch {
       // Gracefully fall back to seed data if database table not yet populated
     }
 
     // Apply in-memory filters on seed dataset
-    return SEED_PROBLEMS.filter((p) => {
+    const filtered = SEED_PROBLEMS.filter((p) => {
       if (filters?.difficulty && p.difficulty !== filters.difficulty) return false;
       if (filters?.category && p.category !== filters.category) return false;
       if (filters?.patternId && p.pattern_id !== filters.patternId) return false;
       return true;
     });
+    return this.withPatterns(filtered, SEED_PATTERNS);
   }
 
   /**
    * Get single problem by ID.
    */
   async getProblemById(id: string): Promise<Problem | null> {
+    let problem: Problem | null = null;
+
     try {
       const { data, error } = await this.supabase
         .from('problems')
@@ -1347,12 +1365,60 @@ export class ProblemsService {
         .eq('id', id)
         .single();
 
-      if (!error && data) return data as Problem;
+      if (!error && data) problem = data as Problem;
     } catch {
       // Fallback
     }
 
-    return SEED_PROBLEMS.find((p) => p.id === id) || null;
+    if (!problem) {
+      problem = SEED_PROBLEMS.find((p) => p.id === id) || null;
+    }
+    if (!problem) return null;
+
+    return this.withPatterns([problem], await this.getPatterns())[0];
+  }
+
+  /**
+   * List attempts from Supabase (when available) and the durable local store.
+   */
+  async getUserAttempts(userId: string): Promise<StoredAttempt[]> {
+    const merged = new Map(listAttempts(userId).map((a) => [a.id, a]));
+
+    try {
+      const { data, error } = await this.supabase
+        .from('problem_attempts')
+        .select('id, user_id, problem_id, language, status, hints_used, test_results, ai_feedback, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(200);
+
+      if (!error && data) {
+        for (const row of data) {
+          if (merged.has(row.id)) continue;
+          const testResults = Array.isArray(row.test_results) ? row.test_results : [];
+          merged.set(row.id, {
+            id: row.id,
+            user_id: row.user_id,
+            problem_id: row.problem_id,
+            problem_title:
+              SEED_PROBLEMS.find((p) => p.id === row.problem_id)?.title || 'Coding problem',
+            language: row.language || 'javascript',
+            status: row.status,
+            passed: testResults.filter((t: any) => t?.passed).length,
+            total: testResults.length,
+            hints_used: row.hints_used || 0,
+            detected_issues: row.ai_feedback?.detectedIssues || [],
+            created_at: row.created_at,
+          });
+        }
+      }
+    } catch {
+      // Local attempts are sufficient
+    }
+
+    return Array.from(merged.values()).sort((a, b) =>
+      b.created_at.localeCompare(a.created_at)
+    );
   }
 
   /**
@@ -1422,10 +1488,27 @@ export class ProblemsService {
         : 'passed'
       : 'failed';
 
-    // 3. Persist attempt if table exists
-    let attemptId = null;
+    const detectedIssues = aiReview.detectedIssues || [];
+
+    // 3. Always persist locally so attempts survive without migration 003.
+    const localAttempt = addAttempt({
+      user_id: userId,
+      problem_id: problemId,
+      problem_title: problem.title,
+      language,
+      status,
+      passed: testExecution.passed,
+      total: testExecution.total,
+      hints_used: hintsUsed,
+      detected_issues: detectedIssues,
+    });
+
+    let attemptId = localAttempt.id;
+    let attemptStorage: 'database' | 'local' = 'local';
+
+    // Mirror to Supabase when the problem_attempts table exists.
     try {
-      const { data: attempt } = await this.supabase
+      const { data: attempt, error } = await this.supabase
         .from('problem_attempts')
         .insert({
           user_id: userId,
@@ -1440,15 +1523,19 @@ export class ProblemsService {
         .select('id')
         .single();
 
-      if (attempt) attemptId = attempt.id;
+      if (!error && attempt) {
+        attemptId = attempt.id;
+        attemptStorage = 'database';
+      }
     } catch {
-      // Silent catch for attempt logging
+      // Local persistence already complete
     }
 
     // 4. Record detected misconceptions for cross-session adaptation
-    if (aiReview.detectedIssues && aiReview.detectedIssues.length > 0) {
+    if (detectedIssues.length > 0) {
+      recordMisconceptions(userId, detectedIssues);
       try {
-        for (const issue of aiReview.detectedIssues) {
+        for (const issue of detectedIssues) {
           await this.supabase.from('student_misconceptions').upsert(
             {
               user_id: userId,
@@ -1460,7 +1547,7 @@ export class ProblemsService {
           );
         }
       } catch {
-        // Silent catch
+        // Local persistence already complete
       }
     }
 
@@ -1475,6 +1562,7 @@ export class ProblemsService {
       },
       aiReview,
       attemptId,
+      attemptStorage,
     };
   }
 
@@ -1791,7 +1879,20 @@ export class ProblemsService {
       },
     };
 
-    return problemHints[level] || problemHints[1];
+    const categories: Record<number, string> = {
+      1: 'Pattern Recognition',
+      2: 'Algorithmic Invariant',
+      3: 'Boundary & Loop Conditions',
+    };
+    const selected = problemHints[level] || problemHints[1];
+
+    return {
+      hintLevel: level,
+      category: categories[level] || categories[1],
+      title: selected.title,
+      content: selected.content,
+      hintContent: selected.content,
+    };
   }
 }
 

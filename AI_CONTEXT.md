@@ -381,28 +381,30 @@ If uncertain, inspect first rather than guessing.
 
 # 13. Current Status
 
-The project has completed **all 10 architectural phases (Phases 0 through 10)**.
+The project has completed **all 11 architectural phases (Phases 0 through 11)**.
 
 All key systems are implemented, integrated, and verified:
 - **Phase 0 & 1**: Documentation, Supabase Auth, Foundation schema, Express backend, Expo mobile app.
-- **Phase 2 & 3**: Comprehensive DSA curriculum, Socratic AI Tutor vertical slice (Gemini 3.6 Flash + Mock fallback).
+- **Phase 2 & 3**: Canonical curriculum (3 courses / 12 modules / 17 topics / 40 concepts / 30 relationships), Socratic AI Tutor vertical slice (Gemini 3.6 Flash + Mock fallback).
 - **Phase 4**: Multi-interaction types, confidence calibration, prerequisite descent & ascent.
-- **Phase 5**: Problem solving studio, sandboxed Node.js VM execution engine (1,000ms timeout), Socratic code reviewer.
+- **Phase 5**: Problem solving studio (30 problems / 15 patterns), isolated child-process JavaScript sandbox with per-test and hard timeouts, Socratic code reviewer.
 - **Phase 6**: Interactive mental model visualizers (BST traversals, Graph BFS/DFS, Two-Pointer window, DP Matrix, Big-O comparator).
-- **Phase 7**: Free-first speech-to-text verbal reasoning with live transcript editing and Socratic communication delivery feedback.
+- **Phase 7**: Free-first verbal reasoning with editable web transcription, native keyboard fallback, and Socratic delivery feedback.
 - **Phase 8**: Revision & spaced repetition via SuperMemo SM-2 algorithm with 5-box Leitner categorization and active retrieval flashcards.
 - **Phase 9**: Production-scale System Design studio with back-of-the-envelope estimation and Socratic architecture consultant.
-- **Phase 10**: Zero TypeScript compilation errors and 117 automated test assertions passing across all suites.
+- **Phase 10**: Full navigation wiring, content expansion, and zero-error TypeScript verification.
+- **Phase 11**: Real progress API/dashboard, durable persistence fallback, API/security hardening, CI, Docker/EAS packaging, deployment documentation, and 159 automated assertions passing across nine suites.
 
 ---
 
 # 14. Current Priority
 
-The project is feature-complete and ready for demonstration, academic presentation, or further user testing. Future agents should maintain:
+The project is feature-complete, hardened, and packaged for deployment. Future agents should maintain:
 1. Strict adherence to **Free-First (DEC-006)**.
 2. Zero TypeScript compiler errors (`npx tsc --noEmit` clean on both `backend/` and `mobile/`).
-3. 100% pass rate across all 117 automated unit and integration tests.
+3. 100% pass rate across all 159 automated assertions (nine backend suites; run `npm test` from `backend/`).
 4. Continuous synchronization between codebase reality and repository `.md` files.
+5. Deployment guidance in [`DEPLOYMENT.md`](DEPLOYMENT.md), including secrets handling and CORS allowlisting.
 
 ---
 
@@ -413,6 +415,7 @@ When an AI agent finishes meaningful work, it should update:
 - `PROJECT_MEMORY.md`
 - `TASKS.md`
 - `CHANGELOG.md`
+- `DEPLOYMENT.md` if environment variables, packaging, or operational behavior changed
 
 If an architectural decision was made, also update:
 

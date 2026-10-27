@@ -10,9 +10,9 @@ AI agents should update it whenever meaningful work is completed.
 
 Phase:
 
-**Phase 10 — Final Polish, Full Suite Verification & Production Readiness (COMPLETE)**
+**Phase 11 — Production Hardening, Real Progress & Deployment (COMPLETE)**
 
-All architectural phases (Phases 0 through 10) are implemented, integrated, and verified with 117 automated test assertions passing across backend and mobile.
+All architectural phases (Phases 0 through 11) are implemented, integrated, and verified with 159 automated test assertions passing across nine backend suites plus clean backend/mobile typechecks and a production web bundle.
 
 ---
 
@@ -90,7 +90,7 @@ All architectural phases (Phases 0 through 10) are implemented, integrated, and 
 
 # PHASE 5 — Problem Solving & DSA Patterns (COMPLETE)
 
-- [x] Resolve DEC-DEF-01: Sandboxed Node.js VM Context with 1,000ms wall-clock timeout
+- [x] Resolve DEC-DEF-01: Isolated child-process JavaScript sandbox with per-test and hard wall-clock timeouts
 - [x] Problem catalog & pattern seed migration (`003_problems_and_patterns.sql`)
 - [x] Sandboxed CodeRunner execution engine (`backend/src/services/codeRunner.ts`)
 - [x] Socratic AI Code Reviewer analyzing sub-optimal O(n) vs optimal O(log n) implementations
@@ -103,11 +103,11 @@ All architectural phases (Phases 0 through 10) are implemented, integrated, and 
 
 # PHASE 6 — Interactive Visualizations & Mental Models (COMPLETE)
 
-- [x] Interactive BST tree visualizer (`VisualBinaryTree.tsx`) with animated in-order, pre-order, post-order, and level-order traversals
+- [x] Interactive BST tree visualizer (`VisualTreeTraversal.tsx`) with animated in-order, pre-order, post-order, and level-order traversals
 - [x] Interactive Graph traversal visualizer (`VisualGraphTraversal.tsx`) with BFS radial expansion and DFS backtracking
-- [x] Interactive Two-Pointers & Sliding Window trace (`VisualTwoPointerWindow.tsx`)
+- [x] Interactive Two-Pointers & Sliding Window trace (`VisualTwoPointerSlidingWindow.tsx`)
 - [x] Interactive Dynamic Programming Matrix visualizer (`VisualDPMatrix.tsx`) for Grid Unique Paths & 0/1 Knapsack
-- [x] Big-O Asymptotic Scaling & Comparator (`VisualBigOComparator.tsx`)
+- [x] Big-O Asymptotic Scaling & Comparator (`VisualComplexityComparator.tsx`)
 - [x] Mental Models & Interactive Visualizer Gallery screen (`mobile/src/app/(main)/visualizers/index.tsx` & `[type].tsx`)
 - [x] Automated test suite (`backend/src/test_interactive_visualizers.ts` — 17/17 assertions passing)
 
@@ -115,7 +115,7 @@ All architectural phases (Phases 0 through 10) are implemented, integrated, and 
 
 # PHASE 7 — Voice & Speech-to-Text Reasoning (COMPLETE)
 
-- [x] Resolve DEC-DEF-02: Hybrid Free-First Voice Architecture (Web Speech API / native dictation + Socratic spoken analysis)
+- [x] Resolve DEC-DEF-02: Hybrid Free-First Voice Architecture (Web Speech API on web, native keyboard fallback, + Socratic spoken analysis)
 - [x] AI Provider verbal evaluation layer (`SpokenReasoningReviewResult`, `MockAIProvider.evaluateSpokenReasoning`, `GeminiProvider`)
 - [x] Backend API endpoint `POST /api/tutor/voice/evaluate`
 - [x] Interactive Voice Reasoning modal (`mobile/src/components/VoiceReasoningModal.tsx`) with live transcript editing
@@ -154,13 +154,32 @@ All architectural phases (Phases 0 through 10) are implemented, integrated, and 
 # PHASE 10 — Final Polish, Curriculum Expansion & Production Readiness (COMPLETE)
 
 - [x] TypeScript compiler zero-error audit (`npx tsc --noEmit` across backend and mobile)
-- [x] Automated end-to-end test suites across all phases (117 / 117 assertions passing)
-- [x] Expanded problem solving catalog to 30 production problems (2–4 per pattern) across all 12 core algorithmic patterns
+- [x] Automated end-to-end test suites across all phases (159 / 159 assertions passing)
+- [x] Expanded problem solving catalog to 30 production problems (2–4 per pattern) across 15 algorithmic patterns
 - [x] Authored 90 graduated Socratic hint ladders (3 tiers per problem)
-- [x] Integrated AlgoMaster.io-inspired roadmap structure with 3 courses, 12 modules, and 28 topics
-- [x] Seeded 32 comprehensive concepts with learning objectives and prerequisite graphs
+- [x] Integrated AlgoMaster.io-inspired roadmap structure with 3 courses, 12 modules, and 17 topics
+- [x] Seeded 40 comprehensive concepts with learning objectives and 30 prerequisite relationships
 - [x] Resolved mobile physical device connectivity (`java.net.ConnectException`) by enhancing `getApiBaseUrl()` and setting host Wi-Fi LAN IP in `mobile/.env`
 - [x] Updated all core documentation files (`TASKS.md`, `DEVELOPMENT_PLAN.md`, `CHANGELOG.md`, `PROJECT_MEMORY.md`)
+
+---
+
+# PHASE 11 — Production Hardening, Real Progress & Deployment (COMPLETE)
+
+- [x] Unified canonical curriculum source and idempotent seed script (`npm run seed:curriculum`); live database reconciled to 3 courses / 12 modules / 17 topics / 40 concepts / 30 relationships / 15 patterns / 30 problems
+- [x] Replaced hardcoded dashboard metrics with `GET /api/progress/summary` and `GET /api/progress/concepts/:id`, aggregating knowledge, sessions, attempts, revision, streaks, weak topics, misconceptions, and recent activity
+- [x] Completed durable local JSON fallback for attempts, revision items/logs, and misconceptions when migrations 003–005 are absent
+- [x] Rebuilt code execution as an isolated child process with per-test VM timeouts, parent hard-kill, 128 MB heap cap, blocked globals/dynamic code, output caps, and JavaScript-only enforcement
+- [x] Added authentication on all tutor/revision/progress routes plus code-execution, AI, and practice rate limits with standard headers and `Retry-After`
+- [x] Added CORS allowlist, security headers, 128 KB JSON body cap, sanitized 4xx/5xx responses, and HSTS in production
+- [x] Added opt-in `TRUST_PROXY` support so IP rate limiting works behind exactly one reverse proxy without enabling header spoofing by default
+- [x] Isolated persistence/revision test suites to temporary local stores, making repeated local runs deterministic
+- [x] Aligned mobile/backend run, submit, hint, and review response shapes; reduced problem hint UI to the supported 3 tiers
+- [x] Fixed voice UX: Web Speech support detection, clear native fallback messaging, recording/typing transcript preservation, and inline error states
+- [x] Added three verification suites: code-execution security (11), API security middleware (10), durable persistence & progress (21)
+- [x] Added GitHub Actions CI for backend typecheck/tests and mobile typecheck/web export
+- [x] Added backend Dockerfile, `.dockerignore`, `mobile/eas.json`, branded app identifiers, and [`DEPLOYMENT.md`](DEPLOYMENT.md)
+- [x] Reconciled all documentation with implemented behavior and current content counts
 
 ---
 
@@ -173,8 +192,14 @@ None. All systems operational.
 # SESSION HANDOFF
 
 ### Last completed work
-- Expanded problem catalog to 30 problems with 90 Socratic hints.
-- Created AlgoMaster.io-inspired 3-tier curriculum fallback covering 28 topics and 32 concepts.
-- Fixed Android Expo physical device connection error (`ConnectException: localhost:3000`) by implementing multi-source IP resolution and setting LAN IP (`192.168.18.11:3000`) in `mobile/.env`.
-- Executed 117 automated unit and integration tests with a 100% pass rate.
-- Verified clean TypeScript compilation across both `backend` and `mobile`.
+- Fixed mobile navigation: removed invalid `/index` suffixes so Practice, Revision, Visualizers, and System Design resolve to their index routes instead of dynamic `[id]`/unmatched routes.
+- Seeded the live database with all 15 patterns and 30 problems; problem list/detail now include joined pattern data for tags and filtering.
+- Revised remaining fabricated revision defaults (retention/streak) to zero when no data is loaded.
+- Production hardening pass across the backend: child-process code runner, rate limits, CORS allowlist, body caps, security headers, and sanitized errors.
+- Real progress API wired into the mobile dashboard; durable fallback store for attempts and revision state.
+- Voice UX fixes and mobile/backend API contract alignment.
+- Three new test suites added; 159 assertions pass across nine suites.
+- CI, Docker, EAS, and deployment documentation added; backend/mobile typechecks and Expo web export verified.
+
+### Immediate next step
+- Deploy the backend and web/mobile builds following `DEPLOYMENT.md`; run authenticated device/browser smoke tests against the deployed environment (no test account was available during this session).

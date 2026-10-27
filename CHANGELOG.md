@@ -29,6 +29,48 @@ All meaningful project changes should be recorded here.
 ```
 
 
+# 2026-10-24 — Phase 11: Production Hardening, Real Progress & Deployment
+
+### Added
+
+- **Real progress API**: `GET /api/progress/summary` and `GET /api/progress/concepts/:id`, aggregating mastery, sessions, attempts, revision, streaks, weak topics, course progress, misconceptions, and recent activity.
+- **Durable fallback store** (`backend/src/services/localStore.ts`): atomic JSON persistence for attempts, revision items/logs, and misconceptions when optional migrations are unavailable.
+- **API security middleware**: dependency-free fixed-window rate limits with standard headers and `Retry-After`; CORS allowlist; security headers; 128 KB strict JSON body cap; sanitized 413/400/500 responses.
+- **Opt-in proxy support**: `TRUST_PROXY=true` makes IP rate limiting honor exactly one trusted reverse proxy; disabled by default to prevent header spoofing.
+- **Verification suites**: `test_code_execution_security.ts` (11), `test_api_security.ts` (10), `test_progress_persistence.ts` (21).
+- **CI and deployment assets**: `.github/workflows/ci.yml`, `backend/Dockerfile`, `backend/.dockerignore`, `mobile/eas.json`, and `DEPLOYMENT.md`.
+- **Canonical curriculum seeder** (`npm run seed:curriculum`) with deterministic UUID upserts and post-seed verification for courses, modules, topics, concepts, relationships, patterns, and problems.
+
+### Changed
+
+- **Code execution rewritten** as an isolated child process (`backend/codeRunnerWorker.cjs`) with per-test VM timeouts, parent hard-kill, 128 MB heap cap, output caps, blocked globals/dynamic code, and JavaScript-only enforcement. Decision DEC-DEF-01 amended.
+- **Authentication is mandatory** on tutor, revision, progress, profile, problem execution/submission/hint, and system-design evaluation routes; optional/guest bypass removed.
+- **Mobile/backend contracts aligned**: run/submit/hint responses now include mobile-friendly aliases; problem hint UI reduced to the supported 3 tiers.
+- **Voice UX**: Web Speech support detection, native keyboard-dictation fallback messaging, transcript preservation while recording, and inline permission/submission errors.
+- **App identity**: Expo name/slug/scheme and iOS/Android identifiers branded as AlgoMentor AI.
+
+### Fixed
+
+- Bottom-navigation and dashboard links no longer append `/index`; routes now resolve to `/problems`, `/visualizers`, `/revision`, and `/system-design` instead of matching dynamic `[id]` routes with `id="index"` or showing "Unmatched Route".
+- The live database now contains all 15 patterns and 30 problems; the seeder previously seeded only the concept curriculum, leaving the catalog at the three migration bootstrap problems.
+- Problem list and detail responses include their associated pattern objects, so catalog tags and pattern filtering work against database-backed content.
+- Attempts and revision progress no longer disappear when optional database migrations are absent.
+- Code-runner timeouts no longer rely on in-process VM limits alone; runaway workers are killed.
+- Mobile run/submit/hint/review response parsing matches the backend payloads.
+- Spaced-repetition tests now use an isolated temp local store, so repeated runs are deterministic instead of inheriting previously rescheduled items.
+- Revision overview no longer displays fabricated 85% retention or a 3-day streak before data loads; empty values render as zero.
+
+### Architectural
+
+- Added DEC-DEF-04 (durable local fallback for optional persistence tables).
+- Code execution, API hardening, and persistence behavior documented in `SECURITY.md`, `TECH_STACK.md`, and `DEPLOYMENT.md`.
+
+### Documentation
+
+- Reconciled all core docs with current content counts (3 courses / 12 modules / 17 topics / 40 concepts / 30 relationships; 30 problems / 15 patterns) and 159 passing assertions across nine suites.
+
+---
+
 # 2026-09-24 — Phase 10: Final Polish, Verification & Full Suite Audit
 
 ### Added
@@ -87,7 +129,7 @@ All meaningful project changes should be recorded here.
 ### Added
 
 - **Architectural Decision Resolved**:
-  - Accepted `DEC-DEF-02`: Hybrid Free-First Voice Reasoning Architecture (Web Speech API / native dictation + Socratic spoken analysis).
+  - Accepted `DEC-DEF-02`: Hybrid Free-First Voice Reasoning Architecture (Web Speech API on web, keyboard-dictation fallback on native, + Socratic spoken analysis).
 - **AI Verbal Reasoning Layer** (`aiProvider.ts`, `mockProvider.ts`, `geminiProvider.ts`):
   - `evaluateSpokenReasoning`: Evaluates spoken transcripts for clarity, conceptual accuracy, missing edge cases, and technical interview delivery tips.
   - Route `POST /api/tutor/voice/evaluate`.

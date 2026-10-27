@@ -19,6 +19,10 @@ export default function MainLayout() {
         options={{ headerShown: false }}
       />
       <Stack.Screen
+        name="profile"
+        options={{ title: 'Profile & Progress' }}
+      />
+      <Stack.Screen
         name="course/[id]"
         options={{ title: 'Course' }}
       />
